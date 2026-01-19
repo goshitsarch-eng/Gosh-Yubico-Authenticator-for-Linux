@@ -45,7 +45,7 @@ jobs:
 
       - name: Install Rust toolchain (x86_64)
         if: matrix.arch == 'x86_64'
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Build (x86_64)
         if: matrix.arch == 'x86_64'
@@ -127,6 +127,10 @@ jobs:
           fi
 
       # x86_64 packaging (native)
+      - name: Install Rust toolchain (x86_64)
+        if: matrix.arch == 'x86_64'
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Install packaging tools (x86_64)
         if: matrix.arch == 'x86_64'
         run: |
