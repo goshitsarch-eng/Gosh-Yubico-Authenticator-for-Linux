@@ -1,0 +1,238 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            target: x86_64-unknown-linux-gnu
+            docker_platform: ""
+          - arch: aarch64
+            target: aarch64-unknown-linux-gnu
+            docker_platform: linux/arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # x86_64 native build
+      - name: Install dependencies (x86_64)
+        if: matrix.arch == 'x86_64'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-4-dev \
+            libadwaita-1-dev \
+            libpcsclite-dev \
+            pkg-config
+
+      - name: Install Rust toolchain (x86_64)
+        if: matrix.arch == 'x86_64'
+        uses: dtolnay/rust-action@stable
+
+      - name: Build (x86_64)
+        if: matrix.arch == 'x86_64'
+        run: cargo build --release
+
+      # aarch64 cross-compilation via Docker/QEMU
+      - name: Set up QEMU
+        if: matrix.arch == 'aarch64'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: matrix.arch == 'aarch64'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build (aarch64)
+        if: matrix.arch == 'aarch64'
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace \
+            ubuntu:24.04 \
+            bash -c "
+              apt-get update && \
+              apt-get install -y \
+                curl \
+                build-essential \
+                pkg-config \
+                libgtk-4-dev \
+                libadwaita-1-dev \
+                libpcsclite-dev && \
+              curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
+              source ~/.cargo/env && \
+              cargo build --release
+            "
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.arch }}
+          path: target/release/gosh-authenticator
+          retention-days: 1
+
+  package:
+    name: Package (${{ matrix.arch }})
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            deb_arch: amd64
+            rpm_arch: x86_64
+            docker_platform: ""
+          - arch: aarch64
+            deb_arch: arm64
+            rpm_arch: aarch64
+            docker_platform: linux/arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download binary
+        uses: actions/download-artifact@v4
+        with:
+          name: binary-${{ matrix.arch }}
+          path: target/release/
+
+      - name: Make binary executable
+        run: chmod +x target/release/gosh-authenticator
+
+      - name: Get version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      # x86_64 packaging (native)
+      - name: Install packaging tools (x86_64)
+        if: matrix.arch == 'x86_64'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-4-dev \
+            libadwaita-1-dev \
+            libpcsclite-dev \
+            pkg-config
+          cargo install cargo-deb cargo-generate-rpm
+
+      - name: Build DEB package (x86_64)
+        if: matrix.arch == 'x86_64'
+        run: cargo deb --no-build
+
+      - name: Build RPM package (x86_64)
+        if: matrix.arch == 'x86_64'
+        run: cargo generate-rpm
+
+      # aarch64 packaging via Docker/QEMU
+      - name: Set up QEMU
+        if: matrix.arch == 'aarch64'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: matrix.arch == 'aarch64'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build packages (aarch64)
+        if: matrix.arch == 'aarch64'
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace \
+            ubuntu:24.04 \
+            bash -c "
+              apt-get update && \
+              apt-get install -y \
+                curl \
+                build-essential \
+                pkg-config \
+                libgtk-4-dev \
+                libadwaita-1-dev \
+                libpcsclite-dev && \
+              curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
+              source ~/.cargo/env && \
+              cargo install cargo-deb cargo-generate-rpm && \
+              cargo deb --no-build && \
+              cargo generate-rpm
+            "
+
+      - name: Create tarball
+        run: |
+          mkdir -p dist/gosh-authenticator-${{ steps.version.outputs.version }}
+          cp target/release/gosh-authenticator dist/gosh-authenticator-${{ steps.version.outputs.version }}/
+          cp data/com.github.gosh.authenticator.desktop dist/gosh-authenticator-${{ steps.version.outputs.version }}/
+          cp -r data/icons dist/gosh-authenticator-${{ steps.version.outputs.version }}/
+          cp README.md dist/gosh-authenticator-${{ steps.version.outputs.version }}/
+          cd dist
+          tar -czvf gosh-authenticator-${{ steps.version.outputs.version }}-${{ matrix.arch }}.tar.gz gosh-authenticator-${{ steps.version.outputs.version }}
+
+      - name: Upload DEB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-${{ matrix.arch }}
+          path: target/debian/*.deb
+          retention-days: 1
+
+      - name: Upload RPM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpm-${{ matrix.arch }}
+          path: target/generate-rpm/*.rpm
+          retention-days: 1
+
+      - name: Upload tarball artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarball-${{ matrix.arch }}
+          path: dist/*.tar.gz
+          retention-days: 1
+
+  release:
+    name: Create Release
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          find artifacts -name "*.deb" -exec cp {} release/ \;
+          find artifacts -name "*.rpm" -exec cp {} release/ \;
+          find artifacts -name "*.tar.gz" -exec cp {} release/ \;
+          ls -la release/
+
+      - name: Determine if prerelease
+        id: prerelease
+        run: |
+          if [[ "${{ github.ref_name }}" =~ (alpha|beta|rc) ]]; then
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          prerelease: ${{ steps.prerelease.outputs.prerelease }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
