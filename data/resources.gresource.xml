@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/com/github/gosh/authenticator">
+    <file preprocess="xml-stripblanks">ui/window.ui</file>
+    <file preprocess="xml-stripblanks">ui/credential-row.ui</file>
+    <file preprocess="xml-stripblanks">ui/add-credential-dialog.ui</file>
+  </gresource>
+  <gresource prefix="/com/github/gosh/authenticator/icons/hicolor">
+    <file alias="index.theme">icons/hicolor/index.theme</file>
+  </gresource>
+  <gresource prefix="/com/github/gosh/authenticator/icons/hicolor/scalable/apps">
+    <file alias="com.github.gosh.authenticator.svg">icons/hicolor/scalable/apps/com.github.gosh.authenticator.svg</file>
+  </gresource>
+  <gresource prefix="/com/github/gosh/authenticator/icons/hicolor/symbolic/apps">
+    <file alias="com.github.gosh.authenticator-symbolic.svg">icons/hicolor/symbolic/apps/com.github.gosh.authenticator-symbolic.svg</file>
+  </gresource>
+</gresources>

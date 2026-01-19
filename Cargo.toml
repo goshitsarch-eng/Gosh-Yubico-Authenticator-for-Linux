@@ -1,0 +1,44 @@
+[package]
+name = "gosh-authenticator"
+version = "0.1.0"
+edition = "2021"
+authors = ["Goshitsarch"]
+description = "A GTK 4 + Rust desktop application for managing OATH credentials on YubiKey devices"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/goshitsarch-eng/Gosh-Yubico-Authenticator-for-Linux"
+
+[dependencies]
+# GTK 4.12+ and libadwaita 1.4+ for GNOME 45+
+gtk4 = { version = "0.9", features = ["v4_12"] }
+libadwaita = { version = "0.7", features = ["v1_4"] }
+glib = "0.20"
+gio = "0.20"
+
+# Async communication between threads
+async-channel = "2.3"
+
+# PC/SC smartcard communication
+pcsc = "2.9"
+
+# Cryptographic operations for OATH
+hmac = "0.12"
+sha1 = "0.10"
+sha2 = "0.10"
+pbkdf2 = "0.12"
+
+# Cairo for custom drawing
+cairo-rs = { version = "0.20", features = ["v1_16"] }
+
+# Utilities
+thiserror = "2.0"
+data-encoding = "2.6"
+log = "0.4"
+env_logger = "0.11"
+
+[build-dependencies]
+glib-build-tools = "0.20"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
