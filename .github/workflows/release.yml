@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version for release (e.g., 0.1.0)'
+        required: true
+        type: string
 
 env:
   CARGO_TERM_COLOR: always
@@ -113,7 +119,12 @@ jobs:
 
       - name: Get version
         id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+          fi
 
       # x86_64 packaging (native)
       - name: Install packaging tools (x86_64)
@@ -222,7 +233,8 @@ jobs:
       - name: Determine if prerelease
         id: prerelease
         run: |
-          if [[ "${{ github.ref_name }}" =~ (alpha|beta|rc) ]]; then
+          VERSION="${{ inputs.version || github.ref_name }}"
+          if [[ "$VERSION" =~ (alpha|beta|rc) ]]; then
             echo "prerelease=true" >> $GITHUB_OUTPUT
           else
             echo "prerelease=false" >> $GITHUB_OUTPUT
@@ -231,6 +243,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.version && format('v{0}', inputs.version) || github.ref_name }}
           files: release/*
           prerelease: ${{ steps.prerelease.outputs.prerelease }}
           generate_release_notes: true
