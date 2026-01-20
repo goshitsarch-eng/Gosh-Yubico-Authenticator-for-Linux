@@ -3,17 +3,16 @@ name = "gosh-authenticator"
 version = "0.1.0"
 edition = "2021"
 authors = ["Goshitsarch"]
-description = "A GTK 4 + Rust desktop application for managing OATH credentials on YubiKey devices"
+description = "A Qt 6 + Rust desktop application for managing OATH credentials on YubiKey devices"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/goshitsarch-eng/Gosh-Yubico-Authenticator-for-Linux"
 
-[dependencies]
-# GTK 4.12+ and libadwaita 1.4+ for GNOME 45+
-gtk4 = { version = "0.9", features = ["v4_12"] }
-libadwaita = { version = "0.7", features = ["v1_4"] }
-glib = "0.20"
-gio = "0.20"
+[lib]
+name = "gosh_authenticator_core"
+path = "src/lib.rs"
+crate-type = ["staticlib", "cdylib"]
 
+[dependencies]
 # Async communication between threads
 async-channel = "2.3"
 
@@ -26,45 +25,14 @@ sha1 = "0.10"
 sha2 = "0.10"
 pbkdf2 = "0.12"
 
-# Cairo for custom drawing
-cairo-rs = { version = "0.20", features = ["v1_16"] }
-
 # Utilities
 thiserror = "2.0"
 data-encoding = "2.6"
 log = "0.4"
 env_logger = "0.11"
-
-[build-dependencies]
-glib-build-tools = "0.20"
+libc = "0.2"
 
 [profile.release]
 lto = true
 codegen-units = 1
 strip = true
-
-[package.metadata.deb]
-maintainer = "Goshitsarch"
-depends = "$auto, pcscd"
-section = "utils"
-assets = [
-    ["target/release/gosh-authenticator", "usr/bin/", "755"],
-    ["data/com.github.gosh.authenticator.desktop", "usr/share/applications/", "644"],
-    ["data/icons/hicolor/scalable/apps/com.github.gosh.authenticator.svg", "usr/share/icons/hicolor/scalable/apps/", "644"],
-    ["data/icons/hicolor/symbolic/apps/com.github.gosh.authenticator-symbolic.svg", "usr/share/icons/hicolor/symbolic/apps/", "644"],
-    ["README.md", "usr/share/doc/gosh-authenticator/README.md", "644"],
-]
-
-[package.metadata.generate-rpm]
-assets = [
-    { source = "target/release/gosh-authenticator", dest = "/usr/bin/gosh-authenticator", mode = "755" },
-    { source = "data/com.github.gosh.authenticator.desktop", dest = "/usr/share/applications/com.github.gosh.authenticator.desktop", mode = "644" },
-    { source = "data/icons/hicolor/scalable/apps/com.github.gosh.authenticator.svg", dest = "/usr/share/icons/hicolor/scalable/apps/com.github.gosh.authenticator.svg", mode = "644" },
-    { source = "data/icons/hicolor/symbolic/apps/com.github.gosh.authenticator-symbolic.svg", dest = "/usr/share/icons/hicolor/symbolic/apps/com.github.gosh.authenticator-symbolic.svg", mode = "644" },
-    { source = "README.md", dest = "/usr/share/doc/gosh-authenticator/README.md", mode = "644", doc = true },
-]
-
-[package.metadata.generate-rpm.requires]
-gtk4 = ">= 4.12"
-libadwaita = ">= 1.4"
-pcsc-lite = "*"

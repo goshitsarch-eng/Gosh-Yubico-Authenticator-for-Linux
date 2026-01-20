@@ -1,12 +1,19 @@
-# Rust build artifacts
-/target/
+/build
+/target
+**/*.o
+**/*.obj
+**/*.a
+**/*.so
+**/*.dylib
+**/*.dll
+**/*.exe
+
+# Qt/CMake
+/.qt
+/CMakeFiles
+/CMakeCache.txt
+/cmake_install.cmake
 
 # IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS files
-.DS_Store
-Thumbs.db
+/.vscode
+/.idea

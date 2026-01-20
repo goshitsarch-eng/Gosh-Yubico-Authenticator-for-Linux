@@ -1,6 +1,6 @@
 # Gosh Yubico Authenticator for Linux
 
-A GTK 4 + Rust desktop application for managing OATH (TOTP/HOTP) credentials stored on YubiKey devices.
+A Qt 6 + Rust desktop application for managing OATH (TOTP/HOTP) credentials stored on YubiKey devices.
 
 ## Features
 
@@ -18,18 +18,18 @@ A GTK 4 + Rust desktop application for managing OATH (TOTP/HOTP) credentials sto
 ### Runtime Dependencies
 
 - **pcscd** - PC/SC Smart Card Daemon (required for YubiKey communication)
-- GTK 4.12+
-- libadwaita 1.4+
+- Qt 6 (QtBase)
 
 ### Build Dependencies
 
 - Rust 1.70+
-- pkg-config
+- CMake 3.20+
+- Qt 6 development packages
 - libpcsclite-dev
-- libgtk-4-dev
-- libadwaita-1-dev
 
 ## Installation
+
+> Note: The build uses CMake with Corrosion to compile the Rust core and link it into the Qt app.
 
 ### Ubuntu/Debian
 
@@ -38,10 +38,14 @@ A GTK 4 + Rust desktop application for managing OATH (TOTP/HOTP) credentials sto
 sudo apt install pcscd
 
 # Install build dependencies
-sudo apt install pkgconf libpcsclite-dev libgtk-4-dev libadwaita-1-dev
+sudo apt install cmake build-essential pkgconf libpcsclite-dev qt6-base-dev
 
 # Build
-cargo build --release
+cmake -S . -B build
+cmake --build build --config Release
+
+# Install (optional)
+cmake --install build
 ```
 
 ### Fedora
@@ -51,10 +55,14 @@ cargo build --release
 sudo dnf install pcsc-lite
 
 # Install build dependencies
-sudo dnf install pkgconf pcsc-lite-devel gtk4-devel libadwaita-devel
+sudo dnf install cmake gcc-c++ pkgconf pcsc-lite-devel qt6-qtbase-devel
 
 # Build
-cargo build --release
+cmake -S . -B build
+cmake --build build --config Release
+
+# Install (optional)
+cmake --install build
 ```
 
 ### Arch Linux
@@ -64,10 +72,14 @@ cargo build --release
 sudo pacman -S pcsclite
 
 # Install build dependencies
-sudo pacman -S pkgconf gtk4 libadwaita
+sudo pacman -S cmake base-devel pkgconf qt6-base
 
 # Build
-cargo build --release
+cmake -S . -B build
+cmake --build build --config Release
+
+# Install (optional)
+cmake --install build
 ```
 
 ## Running
@@ -89,7 +101,7 @@ cargo build --release
 3. **Run the application**:
 
    ```bash
-   cargo run --release
+   ./build/gosh-authenticator
    ```
 
    Or if installed:
