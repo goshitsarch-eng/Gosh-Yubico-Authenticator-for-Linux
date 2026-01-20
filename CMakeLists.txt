@@ -24,7 +24,11 @@ FetchContent_MakeAvailable(Corrosion)
 corrosion_import_crate(
     MANIFEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Cargo.toml
     CRATES gosh-authenticator
+    CRATE_TYPES staticlib
+    IMPORTED_CRATES RUST_IMPORTED_CRATES
 )
+
+list(GET RUST_IMPORTED_CRATES 0 RUST_CORE_TARGET)
 
 add_executable(gosh-authenticator-app
     qt/main.cpp
@@ -51,7 +55,7 @@ target_compile_definitions(gosh-authenticator-app PRIVATE
 target_link_libraries(gosh-authenticator-app PRIVATE
     Qt6::Widgets
     Qt6::Gui
-    gosh-authenticator
+    ${RUST_CORE_TARGET}
     ${PCSC_LIBRARIES}
 )
 
