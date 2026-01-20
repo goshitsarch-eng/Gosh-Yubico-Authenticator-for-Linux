@@ -1,0 +1,80 @@
+name: Build Packages
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  deb:
+    name: DEB (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ pkgconf libpcsclite-dev qt6-base-dev rpm dpkg-dev curl ca-certificates
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Package
+        run: cpack -G DEB --config build/CPackConfig.cmake
+
+      - name: Upload DEB
+        uses: actions/upload-artifact@v4
+        with:
+          name: gosh-authenticator-deb-${{ matrix.arch }}
+          path: ./*.deb
+
+  rpm:
+    name: RPM (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    container: fedora:40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm64
+    steps:
+      - name: Install build dependencies
+        run: |
+          dnf -y update
+          dnf -y install git cmake gcc-c++ make pkgconf-pkg-config qt6-qtbase-devel pcsc-lite-devel \
+            rpm-build rust cargo
+
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Package
+        run: cpack -G RPM --config build/CPackConfig.cmake
+
+      - name: Upload RPM
+        uses: actions/upload-artifact@v4
+        with:
+          name: gosh-authenticator-rpm-${{ matrix.arch }}
+          path: ./*.rpm
