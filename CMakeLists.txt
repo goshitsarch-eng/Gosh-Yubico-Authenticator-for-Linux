@@ -28,7 +28,23 @@ corrosion_import_crate(
     IMPORTED_CRATES RUST_IMPORTED_CRATES
 )
 
-list(GET RUST_IMPORTED_CRATES 0 RUST_CORE_TARGET)
+set(RUST_CORE_TARGET "")
+foreach(candidate IN LISTS RUST_IMPORTED_CRATES)
+    if(TARGET ${candidate})
+        get_target_property(candidate_type ${candidate} TYPE)
+        if(candidate_type STREQUAL "STATIC_LIBRARY" OR
+           candidate_type STREQUAL "SHARED_LIBRARY" OR
+           candidate_type STREQUAL "OBJECT_LIBRARY" OR
+           candidate_type STREQUAL "INTERFACE_LIBRARY")
+            set(RUST_CORE_TARGET ${candidate})
+            break()
+        endif()
+    endif()
+endforeach()
+
+if(NOT RUST_CORE_TARGET)
+    message(FATAL_ERROR "No Rust library target imported by Corrosion. Found: ${RUST_IMPORTED_CRATES}")
+endif()
 
 add_executable(gosh-authenticator-app
     qt/main.cpp
