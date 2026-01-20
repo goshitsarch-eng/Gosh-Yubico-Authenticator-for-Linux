@@ -13,38 +13,22 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(PCSC REQUIRED libpcsclite)
 qt_standard_project_setup()
 
-include(FetchContent)
-FetchContent_Declare(
-    Corrosion
-    GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
-    GIT_TAG v0.5
-)
-FetchContent_MakeAvailable(Corrosion)
+find_program(CARGO_EXECUTABLE cargo REQUIRED)
+set(RUST_LIB ${CMAKE_CURRENT_SOURCE_DIR}/target/release/libgosh_authenticator_core.a)
 
-corrosion_import_crate(
-    MANIFEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Cargo.toml
-    CRATES gosh-authenticator
-    CRATE_TYPES staticlib
-    IMPORTED_CRATES RUST_IMPORTED_CRATES
+add_custom_command(
+    OUTPUT ${RUST_LIB}
+    COMMAND ${CARGO_EXECUTABLE} build --release --manifest-path ${CMAKE_CURRENT_SOURCE_DIR}/Cargo.toml
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    BYPRODUCTS ${RUST_LIB}
+    COMMENT "Building Rust core (release)"
 )
 
-set(RUST_CORE_TARGET "")
-foreach(candidate IN LISTS RUST_IMPORTED_CRATES)
-    if(TARGET ${candidate})
-        get_target_property(candidate_type ${candidate} TYPE)
-        if(candidate_type STREQUAL "STATIC_LIBRARY" OR
-           candidate_type STREQUAL "SHARED_LIBRARY" OR
-           candidate_type STREQUAL "OBJECT_LIBRARY" OR
-           candidate_type STREQUAL "INTERFACE_LIBRARY")
-            set(RUST_CORE_TARGET ${candidate})
-            break()
-        endif()
-    endif()
-endforeach()
+add_custom_target(rust_core ALL DEPENDS ${RUST_LIB})
 
-if(NOT RUST_CORE_TARGET)
-    message(FATAL_ERROR "No Rust library target imported by Corrosion. Found: ${RUST_IMPORTED_CRATES}")
-endif()
+add_library(gosh_authenticator_core STATIC IMPORTED GLOBAL)
+set_target_properties(gosh_authenticator_core PROPERTIES IMPORTED_LOCATION ${RUST_LIB})
+add_dependencies(gosh_authenticator_core rust_core)
 
 add_executable(gosh-authenticator-app
     qt/main.cpp
@@ -71,7 +55,7 @@ target_compile_definitions(gosh-authenticator-app PRIVATE
 target_link_libraries(gosh-authenticator-app PRIVATE
     Qt6::Widgets
     Qt6::Gui
-    ${RUST_CORE_TARGET}
+    gosh_authenticator_core
     ${PCSC_LIBRARIES}
 )
 
