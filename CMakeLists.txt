@@ -26,7 +26,7 @@ corrosion_import_crate(
     CRATES gosh-authenticator
 )
 
-add_executable(gosh-authenticator
+add_executable(gosh-authenticator-app
     qt/main.cpp
     qt/mainwindow.cpp
     qt/gosh_client.cpp
@@ -37,26 +37,28 @@ add_executable(gosh-authenticator
     qt/resources.qrc
 )
 
-target_include_directories(gosh-authenticator PRIVATE
+set_target_properties(gosh-authenticator-app PROPERTIES OUTPUT_NAME "gosh-authenticator")
+
+target_include_directories(gosh-authenticator-app PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/qt
 )
 
-target_compile_definitions(gosh-authenticator PRIVATE
+target_compile_definitions(gosh-authenticator-app PRIVATE
     VERSION_STRING="${PROJECT_VERSION}"
 )
 
-target_link_libraries(gosh-authenticator PRIVATE
+target_link_libraries(gosh-authenticator-app PRIVATE
     Qt6::Widgets
     Qt6::Gui
-    gosh_authenticator_core
+    gosh-authenticator
     ${PCSC_LIBRARIES}
 )
 
-target_include_directories(gosh-authenticator PRIVATE ${PCSC_INCLUDE_DIRS})
-target_link_directories(gosh-authenticator PRIVATE ${PCSC_LIBRARY_DIRS})
+target_include_directories(gosh-authenticator-app PRIVATE ${PCSC_INCLUDE_DIRS})
+target_link_directories(gosh-authenticator-app PRIVATE ${PCSC_LIBRARY_DIRS})
 
-install(TARGETS gosh-authenticator RUNTIME DESTINATION bin)
+install(TARGETS gosh-authenticator-app RUNTIME DESTINATION bin)
 install(FILES data/com.github.gosh.authenticator.desktop
         DESTINATION share/applications)
 install(FILES data/icons/hicolor/scalable/apps/com.github.gosh.authenticator.svg
