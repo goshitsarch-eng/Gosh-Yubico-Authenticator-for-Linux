@@ -17,26 +17,49 @@ jobs:
           - arch: x64
             runner: ubuntu-latest
           - arch: arm64
-            runner: ubuntu-24.04-arm64
+            runner: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up QEMU (arm64)
+        if: matrix.arch == 'arm64'
+        uses: docker/setup-qemu-action@v3
+
       - name: Install build dependencies
+        if: matrix.arch == 'x64'
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake g++ pkgconf libpcsclite-dev qt6-base-dev rpm dpkg-dev curl ca-certificates
 
       - name: Install Rust toolchain
+        if: matrix.arch == 'x64'
         uses: dtolnay/rust-toolchain@stable
 
       - name: Configure
+        if: matrix.arch == 'x64'
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
+        if: matrix.arch == 'x64'
         run: cmake --build build --config Release
 
       - name: Package
+        if: matrix.arch == 'x64'
         run: cpack -G DEB --config build/CPackConfig.cmake
+
+      - name: Build in arm64 container
+        if: matrix.arch == 'arm64'
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v "${{ github.workspace }}:/work" -w /work ubuntu:24.04 bash -lc \
+            "set -euo pipefail \
+             && apt-get update \
+             && apt-get install -y cmake g++ pkgconf libpcsclite-dev qt6-base-dev rpm dpkg-dev curl ca-certificates \
+             && curl https://sh.rustup.rs -sSf | sh -s -- -y \
+             && source /root/.cargo/env \
+             && cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+             && cmake --build build --config Release \
+             && cpack -G DEB --config build/CPackConfig.cmake"
 
       - name: Upload DEB
         uses: actions/upload-artifact@v4
@@ -47,7 +70,6 @@ jobs:
   rpm:
     name: RPM (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
-    container: fedora:40
     strategy:
       fail-fast: false
       matrix:
@@ -55,24 +77,37 @@ jobs:
           - arch: x64
             runner: ubuntu-latest
           - arch: arm64
-            runner: ubuntu-24.04-arm64
+            runner: ubuntu-latest
     steps:
-      - name: Install build dependencies
-        run: |
-          dnf -y update
-          dnf -y install git cmake gcc-c++ make pkgconf-pkg-config qt6-qtbase-devel pcsc-lite-devel \
-            rpm-build rust cargo
+      - name: Set up QEMU (arm64)
+        if: matrix.arch == 'arm64'
+        uses: docker/setup-qemu-action@v3
 
       - uses: actions/checkout@v4
 
-      - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build RPM in x64 container
+        if: matrix.arch == 'x64'
+        run: |
+          docker run --rm --platform linux/amd64 \
+            -v "${{ github.workspace }}:/work" -w /work fedora:40 bash -lc \
+            "set -euo pipefail \
+             && dnf -y update \
+             && dnf -y install git cmake gcc-c++ make pkgconf-pkg-config qt6-qtbase-devel pcsc-lite-devel rpm-build rust cargo \
+             && cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+             && cmake --build build --config Release \
+             && cpack -G RPM --config build/CPackConfig.cmake"
 
-      - name: Build
-        run: cmake --build build --config Release
-
-      - name: Package
-        run: cpack -G RPM --config build/CPackConfig.cmake
+      - name: Build RPM in arm64 container
+        if: matrix.arch == 'arm64'
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v "${{ github.workspace }}:/work" -w /work fedora:40 bash -lc \
+            "set -euo pipefail \
+             && dnf -y update \
+             && dnf -y install git cmake gcc-c++ make pkgconf-pkg-config qt6-qtbase-devel pcsc-lite-devel rpm-build rust cargo \
+             && cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+             && cmake --build build --config Release \
+             && cpack -G RPM --config build/CPackConfig.cmake"
 
       - name: Upload RPM
         uses: actions/upload-artifact@v4
