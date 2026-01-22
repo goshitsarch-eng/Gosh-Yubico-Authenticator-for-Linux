@@ -45,6 +45,16 @@ class TouchPrompt extends StatelessWidget {
                   ),
                   // YubiKey illustration
                   _buildYubiKeyIllustration(isDark),
+                  // NFC waves icon
+                  Positioned(
+                    right: 20,
+                    top: 120,
+                    child: Icon(
+                      Symbols.contactless,
+                      size: 24,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 48),

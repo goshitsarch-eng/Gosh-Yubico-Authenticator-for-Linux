@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:image/image.dart' as img;
+import 'package:zxing_lib/common.dart';
+import 'package:zxing_lib/qrcode.dart';
 import 'package:zxing_lib/zxing.dart';
 
 import '../ffi/gosh_event.dart';
@@ -103,7 +105,7 @@ class QrScanner {
       return parseOtpAuthUri(text);
     } on NotFoundException {
       throw QrScanException('No QR code found in image');
-    } on FormatReaderException {
+    } on ReaderException {
       throw QrScanException('Could not read QR code');
     }
   }

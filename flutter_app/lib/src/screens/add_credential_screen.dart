@@ -157,7 +157,7 @@ class _AddCredentialScreenState extends ConsumerState<AddCredentialScreen> {
               controller: _issuerController,
               decoration: InputDecoration(
                 hintText: 'e.g. Google, AWS',
-                prefixIcon: Icon(Symbols.business, color: AppColors.textSecondary),
+                prefixIcon: Icon(Symbols.grid_view, color: AppColors.textSecondary),
               ),
             ),
             const SizedBox(height: 20),
@@ -301,10 +301,15 @@ class _AddCredentialScreenState extends ConsumerState<AddCredentialScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.1),
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primaryGlow.withValues(alpha: 0.15),
+            AppColors.primary.withValues(alpha: 0.08),
+          ],
+        ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.2),
+          color: AppColors.primary.withValues(alpha: 0.25),
         ),
       ),
       child: Row(

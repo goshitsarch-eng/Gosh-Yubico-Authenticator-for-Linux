@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../providers/connection_provider.dart' as conn;
 import '../providers/providers.dart';
 import '../theme/colors.dart';
 import '../widgets/change_password_dialog.dart';
@@ -17,10 +18,7 @@ class SettingsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        automaticallyImplyLeading: false,
         title: const Text('Settings'),
       ),
       body: ListView(
@@ -58,11 +56,11 @@ class SettingsScreen extends ConsumerWidget {
               _buildSettingsTile(
                 context,
                 icon: Symbols.key,
-                title: 'Change YubiKey Password',
-                subtitle: connection.status == ConnectionState.connected
+                title: 'Change YubiKey PIN',
+                subtitle: connection.status == conn.ConnectionState.connected
                     ? null
                     : 'Connect YubiKey first',
-                onTap: connection.status == ConnectionState.connected
+                onTap: connection.status == conn.ConnectionState.connected
                     ? () => showChangePasswordDialog(context)
                     : null,
               ),
@@ -183,7 +181,7 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildFooter(BuildContext context, ConnectionNotifierState connection) {
+  Widget _buildFooter(BuildContext context, conn.ConnectionNotifierState connection) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
@@ -226,7 +224,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
         ),
         const SizedBox(height: 24),
-        if (connection.status == ConnectionState.connected) ...[
+        if (connection.status == conn.ConnectionState.connected) ...[
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(

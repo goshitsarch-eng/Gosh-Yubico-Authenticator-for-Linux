@@ -14,7 +14,7 @@ import 'native_library.dart';
 /// Rust backend, converting C callbacks into Dart streams.
 class GoshClient {
   late final Pointer<ffi_bindings.GoshClient> _handle;
-  late final NativeCallable<ffi_bindings.GoshEventCallback> _nativeCallback;
+  late final NativeCallable<ffi_bindings.GoshEventCallbackFunction> _nativeCallback;
   final _eventController = StreamController<events.GoshEvent>.broadcast();
   bool _disposed = false;
 
@@ -26,7 +26,7 @@ class GoshClient {
     _handle = goshFfi.gosh_client_new();
 
     // Set up the callback
-    _nativeCallback = NativeCallable<ffi_bindings.GoshEventCallback>.listener(
+    _nativeCallback = NativeCallable<ffi_bindings.GoshEventCallbackFunction>.listener(
       _onEventNative,
     );
 
@@ -134,14 +134,11 @@ class GoshClient {
   /// Set or change the OATH password.
   ///
   /// Pass an empty string to remove password protection.
+  /// TODO: Implement gosh_client_set_password in Rust backend
   void setPassword(String password) {
     _checkDisposed();
-    final passwordPtr = password.toNativeUtf8();
-    try {
-      goshFfi.gosh_client_set_password(_handle, passwordPtr.cast());
-    } finally {
-      calloc.free(passwordPtr);
-    }
+    // Not yet implemented in Rust backend
+    throw UnimplementedError('setPassword is not yet implemented');
   }
 
   /// Get the last error message.

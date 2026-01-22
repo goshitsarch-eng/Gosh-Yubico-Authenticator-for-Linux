@@ -5,11 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../ffi/gosh_event.dart';
+import '../providers/connection_provider.dart' as conn;
 import '../providers/providers.dart';
 import '../theme/colors.dart';
 import '../widgets/credential_card.dart';
+import 'key_info_screen.dart';
+import 'settings_screen.dart';
 
-/// Home screen showing the list of credentials.
+/// Home screen showing the list of credentials with bottom navigation.
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -20,6 +23,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   Timer? _timer;
   String _searchQuery = '';
+  int _currentIndex = 0;
 
   @override
   void initState() {
@@ -39,52 +43,143 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final connectionState = ref.watch(connectionProvider);
-    final credentialsState = ref.watch(credentialsProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isConnected = connectionState.status == ConnectionState.connected;
+    final isConnected = connectionState.status == conn.ConnectionState.connected;
 
     return Scaffold(
-      body: Stack(
+      body: IndexedStack(
+        index: _currentIndex,
         children: [
-          CustomScrollView(
-            slivers: [
-              // Header Section
-              SliverToBoxAdapter(
-                child: _buildHeader(context, connectionState, isDark),
-              ),
-
-              // Search Bar
-              SliverToBoxAdapter(child: _buildSearchBar(context, isDark)),
-
-              // Content
-              if (connectionState.status == ConnectionState.disconnected)
-                _buildNoDevice(context)
-              else if (credentialsState.credentials.isEmpty)
-                _buildNoCredentials(context)
-              else
-                _buildCredentialList(context, credentialsState.credentials),
-
-              // Bottom padding for FAB
-              const SliverToBoxAdapter(child: SizedBox(height: 100)),
-            ],
-          ),
-
-          // YubiKey Status Toast
-          if (isConnected)
-            Positioned(
-              left: 24,
-              bottom: 24,
-              child: _buildStatusToast(context, connectionState, isDark),
-            ),
+          _buildCredentialsTab(),
+          const KeyInfoScreen(),
+          const SettingsScreen(),
         ],
       ),
-      floatingActionButton: isConnected ? _buildFab(context) : null,
+      bottomNavigationBar: _buildBottomNav(context),
+    );
+  }
+
+  Widget _buildBottomNav(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        border: Border(
+          top: BorderSide(
+            color:
+                isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade200,
+          ),
+        ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(
+                context,
+                index: 0,
+                icon: Symbols.key,
+                label: 'Credentials',
+                isDark: isDark,
+              ),
+              _buildNavItem(
+                context,
+                index: 1,
+                icon: Symbols.info,
+                label: 'Key Info',
+                isDark: isDark,
+              ),
+              _buildNavItem(
+                context,
+                index: 2,
+                icon: Symbols.settings,
+                label: 'Settings',
+                isDark: isDark,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(
+    BuildContext context, {
+    required int index,
+    required IconData icon,
+    required String label,
+    required bool isDark,
+  }) {
+    final isSelected = _currentIndex == index;
+
+    return GestureDetector(
+      onTap: () => setState(() => _currentIndex = index),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: isDark ? 0.2 : 0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 24,
+              color: isSelected ? AppColors.primary : AppColors.textSecondary,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color:
+                        isSelected ? AppColors.primary : AppColors.textSecondary,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCredentialsTab() {
+    final connectionState = ref.watch(connectionProvider);
+    final credentialsState = ref.watch(credentialsProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return CustomScrollView(
+      slivers: [
+        // Header Section
+        SliverToBoxAdapter(
+          child: _buildHeader(context, connectionState, isDark),
+        ),
+
+        // Search Bar
+        SliverToBoxAdapter(child: _buildSearchBar(context, isDark)),
+
+        // Content
+        if (connectionState.status == conn.ConnectionState.disconnected)
+          _buildNoDevice(context)
+        else if (credentialsState.credentials.isEmpty)
+          _buildNoCredentials(context)
+        else
+          _buildCredentialList(context, credentialsState.credentials),
+
+        // Bottom padding for nav bar
+        const SliverToBoxAdapter(child: SizedBox(height: 80)),
+      ],
     );
   }
 
   Widget _buildHeader(
-      BuildContext context, ConnectionNotifierState connection, bool isDark) {
-    final isConnected = connection.status == ConnectionState.connected;
+      BuildContext context, conn.ConnectionNotifierState connection, bool isDark) {
+    final isConnected = connection.status == conn.ConnectionState.connected;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
@@ -94,7 +189,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             : AppColors.backgroundLight.withValues(alpha: 0.95),
         border: Border(
           bottom: BorderSide(
-            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade200,
+            color:
+                isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade200,
           ),
         ),
       ),
@@ -106,6 +202,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             size: 28,
             color: isConnected ? AppColors.primary : AppColors.textSecondary,
           ),
+          const SizedBox(width: 8),
+
+          // Add button
+          if (isConnected)
+            GestureDetector(
+              onTap: () => Navigator.of(context).pushNamed('/add'),
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Symbols.add,
+                  size: 20,
+                  color: Colors.white,
+                ),
+              ),
+            ),
           const SizedBox(width: 12),
 
           // Center: Status and Device Name
@@ -115,7 +231,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 Text(
                   isConnected
                       ? 'CONNECTED'
-                      : connection.status == ConnectionState.connecting
+                      : connection.status == conn.ConnectionState.connecting
                           ? 'CONNECTING...'
                           : 'NO YUBIKEY',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -136,12 +252,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
 
-          // Settings Button
-          IconButton(
-            onPressed: () => Navigator.of(context).pushNamed('/settings'),
-            icon: Icon(Symbols.settings),
-            color: AppColors.textSecondary,
-          ),
+          // Connection status indicator
+          if (isConnected)
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: AppColors.success,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.success.withValues(alpha: 0.5),
+                    blurRadius: 8,
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -290,82 +416,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           },
           childCount: filteredCredentials.length,
         ),
-      ),
-    );
-  }
-
-  Widget _buildFab(BuildContext context) {
-    return FloatingActionButton(
-      onPressed: () => Navigator.of(context).pushNamed('/add'),
-      backgroundColor: AppColors.primary,
-      foregroundColor: Colors.white,
-      elevation: 8,
-      child: Icon(Symbols.add, size: 32),
-    );
-  }
-
-  Widget _buildStatusToast(
-      BuildContext context, ConnectionNotifierState connection, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.surfaceDark.withValues(alpha: 0.9)
-            : AppColors.surfaceLight.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.05)
-              : Colors.grey.shade200,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Pulsing green dot
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.4),
-                  shape: BoxShape.circle,
-                ),
-              ),
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: AppColors.success,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.success.withValues(alpha: 0.6),
-                      blurRadius: 8,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 10),
-          Text(
-            '${connection.yubiKeyInfo?.deviceName ?? "YubiKey"} Connected',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
-                ),
-          ),
-        ],
       ),
     );
   }

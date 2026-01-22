@@ -27,6 +27,8 @@ class _PinEntryDialogState extends ConsumerState<PinEntryDialog> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    final connection = ref.watch(connectionProvider);
+    final deviceName = connection.yubiKeyInfo?.deviceName ?? 'YubiKey';
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Stack(
@@ -96,7 +98,7 @@ class _PinEntryDialogState extends ConsumerState<PinEntryDialog> {
 
                       // Description
                       Text(
-                        'Please enter the PIN for your YubiKey to access credentials.',
+                        'Please enter the PIN for your $deviceName to access credentials.',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: AppColors.textSecondary,
                             ),

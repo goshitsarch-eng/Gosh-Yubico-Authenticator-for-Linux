@@ -166,7 +166,7 @@ class AboutScreen extends StatelessWidget {
           _buildActionTile(
             context,
             isDark: isDark,
-            icon: Symbols.gavel,
+            icon: Symbols.code,
             title: 'Licenses',
             onTap: () => showLicensePage(
               context: context,
