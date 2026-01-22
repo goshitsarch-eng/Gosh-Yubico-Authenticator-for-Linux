@@ -16,6 +16,7 @@ G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
 // Implements GApplication::activate.
 static void my_application_activate(GApplication* application) {
+  g_print("Application ID: %s\n", APPLICATION_ID);
   MyApplication* self = MY_APPLICATION(application);
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
@@ -55,14 +56,15 @@ static void my_application_activate(GApplication* application) {
 
   // Set window icon
   const gchar* assets_path = fl_dart_project_get_assets_path(project);
-  g_autofree gchar* icon_path = g_build_filename(assets_path, "assets", "app_icon.png", nullptr);
+  g_autofree gchar* icon_path = g_build_filename(assets_path, "assets", "icon.png", nullptr);
   GError* error = nullptr;
   GdkPixbuf* icon = gdk_pixbuf_new_from_file(icon_path, &error);
   if (icon) {
+    g_print("Loaded window icon from: %s\n", icon_path);
     gtk_window_set_icon(window, icon);
     g_object_unref(icon);
   } else {
-    g_warning("Failed to load icon: %s", error->message);
+    g_warning("Failed to load icon from %s: %s", icon_path, error->message);
     g_error_free(error);
   }
 

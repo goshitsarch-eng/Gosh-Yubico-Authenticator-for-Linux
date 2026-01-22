@@ -52,7 +52,8 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/app_icon.png
+    - assets/icon.svg
+    - assets/icon.png
 
 ffigen:
   name: GoshFfiBindings
