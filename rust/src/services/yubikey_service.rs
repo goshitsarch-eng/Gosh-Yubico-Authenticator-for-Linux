@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::thread;
 
 use async_channel::{Receiver, Sender};
@@ -273,8 +274,14 @@ impl Worker {
         // Calculate all TOTP credentials at once
         match session.calculate_all(None) {
             Ok(results) => {
+                let mut index = HashMap::with_capacity(credentials.len());
+                for (idx, cred) in credentials.iter().enumerate() {
+                    index.insert(cred.id.clone(), idx);
+                }
+
                 for (id, code_info) in results {
-                    if let Some(cred) = credentials.iter_mut().find(|c| c.id == id) {
+                    if let Some(idx) = index.get(&id).copied() {
+                        let cred = &mut credentials[idx];
                         match code_info {
                             Some((code, digits)) => {
                                 cred.set_code(code, digits);

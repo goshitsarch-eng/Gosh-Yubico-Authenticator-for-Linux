@@ -1,6 +1,0 @@
-<RCC>
-    <qresource prefix="/icons">
-        <file alias="app-icon.svg">../data/icons/hicolor/scalable/apps/com.github.gosh.authenticator.svg</file>
-        <file alias="app-icon-symbolic.svg">../data/icons/hicolor/symbolic/apps/com.github.gosh.authenticator-symbolic.svg</file>
-    </qresource>
-</RCC>

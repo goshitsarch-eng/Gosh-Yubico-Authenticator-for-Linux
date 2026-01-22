@@ -1,5 +1,6 @@
 use hmac::{Hmac, Mac};
 use sha1::Sha1;
+use getrandom::getrandom;
 
 use super::apdu::{self, Algorithm, OathType, Tag, TlvParser};
 use super::connection::YubiKeyConnection;
@@ -55,7 +56,7 @@ impl OathSession {
         let response = calculate_hmac(&key, challenge, algorithm);
 
         // Generate our own challenge for the device to respond to
-        let our_challenge: [u8; 8] = rand_bytes();
+        let our_challenge: [u8; 8] = rand_bytes()?;
 
         // Build and send VALIDATE command
         let apdu = apdu::build_validate_apdu(&response, &our_challenge);
@@ -294,7 +295,7 @@ impl OathSession {
             let key = derive_key(new_password, &device_id, Algorithm::Sha1);
 
             // Generate a challenge for verification
-            let challenge: [u8; 8] = rand_bytes();
+            let challenge: [u8; 8] = rand_bytes()?;
             let response_hmac = calculate_hmac(&key, &challenge, Algorithm::Sha1);
 
             let apdu = apdu::build_set_code_apdu(&key, &challenge, &response_hmac);
@@ -337,6 +338,7 @@ fn build_credential_name(issuer: Option<&str>, account: &str) -> Vec<u8> {
 
 /// Get TOTP challenge for a given timestamp
 fn get_challenge(timestamp: Option<u64>, period: u32) -> Vec<u8> {
+    let period = if period == 0 { 30 } else { period };
     let ts = timestamp.unwrap_or_else(|| {
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -354,10 +356,18 @@ fn parse_truncated_response(value: &[u8]) -> Option<(u32, u8)> {
     }
 
     let digits = value[0];
+    if !(6..=8).contains(&digits) {
+        return None;
+    }
     let code = u32::from_be_bytes([value[1], value[2], value[3], value[4]]);
 
     // Truncate to specified digits
-    let divisor = 10u32.pow(digits as u32);
+    let divisor = match digits {
+        6 => 1_000_000,
+        7 => 10_000_000,
+        8 => 100_000_000,
+        _ => return None,
+    };
     let truncated = code % divisor;
 
     Some((truncated, digits))
@@ -394,19 +404,11 @@ fn pad_secret(secret: &[u8], algorithm: Algorithm) -> Vec<u8> {
 }
 
 /// Generate random bytes (simple implementation)
-fn rand_bytes<const N: usize>() -> [u8; N] {
+fn rand_bytes<const N: usize>() -> Result<[u8; N]> {
     let mut bytes = [0u8; N];
-    // Use timestamp-based pseudo-random for simplicity
-    // In production, use a proper random source
-    let ts = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
-
-    for (i, byte) in bytes.iter_mut().enumerate() {
-        *byte = ((ts >> (i * 8)) & 0xFF) as u8;
-    }
-    bytes
+    getrandom(&mut bytes)
+        .map_err(|e| YubiKeyError::Generic(format!("Random generation failed: {}", e)))?;
+    Ok(bytes)
 }
 
 #[cfg(test)]

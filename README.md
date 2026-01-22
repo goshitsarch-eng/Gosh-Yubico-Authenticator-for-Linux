@@ -1,6 +1,6 @@
 # Gosh Yubico Authenticator for Linux
 
-A Qt 6 + Rust desktop application for managing OATH (TOTP/HOTP) credentials stored on YubiKey devices.
+A Flutter + Rust desktop application for managing OATH (TOTP/HOTP) credentials stored on YubiKey devices.
 
 ## Features
 
@@ -18,18 +18,16 @@ A Qt 6 + Rust desktop application for managing OATH (TOTP/HOTP) credentials stor
 ### Runtime Dependencies
 
 - **pcscd** - PC/SC Smart Card Daemon (required for YubiKey communication)
-- Qt 6 (QtBase)
 
 ### Build Dependencies
 
 - Rust 1.70+
-- CMake 3.20+
-- Qt 6 development packages
+- Flutter 3.x (with desktop support enabled)
 - libpcsclite-dev
 
 ## Installation
 
-> Note: The build uses CMake with Corrosion to compile the Rust core and link it into the Qt app.
+> Note: The build uses Flutter's desktop tooling and compiles the Rust core as a shared library.
 
 ### Ubuntu/Debian
 
@@ -38,14 +36,11 @@ A Qt 6 + Rust desktop application for managing OATH (TOTP/HOTP) credentials stor
 sudo apt install pcscd
 
 # Install build dependencies
-sudo apt install cmake build-essential pkgconf libpcsclite-dev qt6-base-dev
+sudo apt install libpcsclite-dev
 
-# Build
-cmake -S . -B build
-cmake --build build --config Release
-
-# Install (optional)
-cmake --install build
+# Build (Flutter desktop)
+cd flutter_app
+flutter build linux
 ```
 
 ### Fedora
@@ -55,14 +50,11 @@ cmake --install build
 sudo dnf install pcsc-lite
 
 # Install build dependencies
-sudo dnf install cmake gcc-c++ pkgconf pcsc-lite-devel qt6-qtbase-devel
+sudo dnf install pcsc-lite-devel
 
-# Build
-cmake -S . -B build
-cmake --build build --config Release
-
-# Install (optional)
-cmake --install build
+# Build (Flutter desktop)
+cd flutter_app
+flutter build linux
 ```
 
 ### Arch Linux
@@ -72,14 +64,11 @@ cmake --install build
 sudo pacman -S pcsclite
 
 # Install build dependencies
-sudo pacman -S cmake base-devel pkgconf qt6-base
+sudo pacman -S base-devel pcsclite
 
-# Build
-cmake -S . -B build
-cmake --build build --config Release
-
-# Install (optional)
-cmake --install build
+# Build (Flutter desktop)
+cd flutter_app
+flutter build linux
 ```
 
 ## Running
@@ -101,13 +90,13 @@ cmake --install build
 3. **Run the application**:
 
    ```bash
-   ./build/gosh-authenticator
+   ./flutter_app/build/linux/x64/release/bundle/gosh_authenticator
    ```
 
    Or if installed:
 
    ```bash
-   gosh-authenticator
+   ./flutter_app/build/linux/x64/release/bundle/gosh_authenticator
    ```
 
 ## Troubleshooting

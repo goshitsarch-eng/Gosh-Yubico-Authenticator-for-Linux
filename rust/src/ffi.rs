@@ -322,8 +322,8 @@ impl GoshClient {
                 if let Some(state) = state {
                     if let Some(cb) = state.callback {
                         let event_box = build_event_box(event);
-                        let event_ptr = &event_box.event as *const GoshEvent;
                         let raw = Box::into_raw(event_box);
+                        let event_ptr = raw as *const GoshEvent;
                         unsafe {
                             cb(event_ptr, state.user_data as *mut c_void);
                         }
