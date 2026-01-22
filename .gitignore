@@ -1,5 +1,6 @@
+# Build artifacts
 /build
-/target
+**/target/
 **/*.o
 **/*.obj
 **/*.a
@@ -7,6 +8,10 @@
 **/*.dylib
 **/*.dll
 **/*.exe
+
+# Rust
+rust/target/
+Cargo.lock
 
 # Qt/CMake
 /.qt
@@ -17,3 +22,7 @@
 # IDE
 /.vscode
 /.idea
+
+# Flutter
+flutter_app/build/
+flutter_app/.dart_tool/
