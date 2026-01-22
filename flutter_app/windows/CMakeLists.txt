@@ -4,7 +4,7 @@ project(gosh_authenticator LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
-set(BINARY_NAME "gosh_authenticator")
+set(BINARY_NAME "gosh_yubikey_manager")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.

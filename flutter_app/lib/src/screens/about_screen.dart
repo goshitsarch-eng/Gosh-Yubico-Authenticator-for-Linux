@@ -32,7 +32,7 @@ class AboutScreen extends StatelessWidget {
 
             // App name and version
             Text(
-              'Yubico Authenticator',
+              'Gosh Yubikey Manager',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -170,7 +170,7 @@ class AboutScreen extends StatelessWidget {
             title: 'Licenses',
             onTap: () => showLicensePage(
               context: context,
-              applicationName: 'Yubico Authenticator',
+              applicationName: 'Gosh Yubikey Manager',
               applicationVersion: '1.0.0',
             ),
           ),

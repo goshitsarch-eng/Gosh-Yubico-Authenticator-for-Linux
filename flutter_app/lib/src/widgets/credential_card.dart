@@ -5,9 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../ffi/gosh_event.dart';
-import '../models/icon_preference.dart';
-import '../providers/favicon_provider.dart';
-import '../providers/icon_preferences_provider.dart';
 import '../providers/providers.dart';
 import '../services/icon_preferences_service.dart';
 import '../theme/colors.dart';
@@ -48,128 +45,83 @@ class _CredentialCardState extends ConsumerState<CredentialCard> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final needsTouch = widget.credential.touchRequired && widget.credential.code == null;
 
-    return Stack(
-      children: [
-        // Main card
-        Container(
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.grey.shade100,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () => _copyCode(context),
-              onLongPress: () => _showIconPicker(context),
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: needsTouch ? 20 : 16,
-                  right: 16,
-                  top: 16,
-                  bottom: 16,
-                ),
-                child: Row(
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      shape: needsTouch
+          ? RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: AppColors.warning.withValues(alpha: 0.5), width: 2),
+            )
+          : null, // Fallback to theme default
+      child: InkWell(
+        onTap: () => _copyCode(context),
+        onLongPress: () => _showIconPicker(context),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              // Icon
+              _buildIcon(isDark),
+              const SizedBox(width: 20),
+
+              // Text content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Icon
-                    _buildIcon(isDark),
-                    const SizedBox(width: 16),
-
-                    // Text content
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.credential.issuer ?? widget.credential.account,
-                            style:
-                                Theme.of(context).textTheme.titleSmall?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                    Text(
+                      widget.credential.issuer ?? widget.credential.account,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
                           ),
-                          if (widget.credential.issuer != null) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              widget.credential.account,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    color: AppColors.textSecondary,
-                                  ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (widget.credential.issuer != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.credential.account,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.textSecondary,
                             ),
-                          ],
-                          if (needsTouch) ...[
-                            const SizedBox(height: 6),
-                            _buildTouchBadge(context),
-                          ],
-                        ],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    const SizedBox(width: 16),
-
-                    // Code and timer
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildCode(context, isDark),
-                        const SizedBox(height: 4),
-                        if (_showCopied)
-                          Text(
-                            'COPIED',
-                            style: TextStyle(
-                              color: AppColors.primaryGlow,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                            ),
-                          )
-                        else
-                          _buildTimer(context, isDark),
-                      ],
-                    ),
+                    ],
+                    if (needsTouch) ...[
+                      const SizedBox(height: 8),
+                      _buildTouchBadge(context),
+                    ],
                   ],
                 ),
               ),
-            ),
+              const SizedBox(width: 16),
+
+              // Code and timer
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildCode(context, isDark),
+                  const SizedBox(height: 6),
+                  if (_showCopied)
+                    Text(
+                      'COPIED',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    )
+                  else
+                    _buildTimer(context, isDark),
+                ],
+              ),
+            ],
           ),
         ),
-
-        // Amber left strip for touch-required credentials
-        if (needsTouch)
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            child: Container(
-              width: 4,
-              decoration: BoxDecoration(
-                color: AppColors.warning,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  bottomLeft: Radius.circular(12),
-                ),
-              ),
-            ),
-          ),
-      ],
+      ),
     );
   }
 

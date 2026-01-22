@@ -54,6 +54,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SettingsScreen(),
         ],
       ),
+      floatingActionButton: _currentIndex == 0 && isConnected
+          ? FloatingActionButton.extended(
+              onPressed: () => Navigator.of(context).pushNamed('/add'),
+              icon: const Icon(Symbols.add),
+              label: const Text('Add Account'),
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            )
+          : null,
       bottomNavigationBar: _buildBottomNav(context),
     );
   }
@@ -77,26 +86,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildNavItem(
-                context,
-                index: 0,
-                icon: Symbols.key,
-                label: 'Credentials',
-                isDark: isDark,
+              Expanded(
+                child: _buildNavItem(
+                  context,
+                  index: 0,
+                  icon: Symbols.key,
+                  label: 'Credentials',
+                  isDark: isDark,
+                ),
               ),
-              _buildNavItem(
-                context,
-                index: 1,
-                icon: Symbols.info,
-                label: 'Key Info',
-                isDark: isDark,
+              Expanded(
+                child: _buildNavItem(
+                  context,
+                  index: 1,
+                  icon: Symbols.info,
+                  label: 'Key Info',
+                  isDark: isDark,
+                ),
               ),
-              _buildNavItem(
-                context,
-                index: 2,
-                icon: Symbols.settings,
-                label: 'Settings',
-                isDark: isDark,
+              Expanded(
+                child: _buildNavItem(
+                  context,
+                  index: 2,
+                  icon: Symbols.settings,
+                  label: 'Settings',
+                  isDark: isDark,
+                ),
               ),
             ],
           ),
@@ -182,90 +197,58 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final isConnected = connection.status == conn.ConnectionState.connected;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
+      padding: const EdgeInsets.fromLTRB(20, 48, 20, 20),
       decoration: BoxDecoration(
         color: isDark
             ? AppColors.backgroundDark.withValues(alpha: 0.95)
             : AppColors.backgroundLight.withValues(alpha: 0.95),
-        border: Border(
-          bottom: BorderSide(
-            color:
-                isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade200,
-          ),
-        ),
       ),
-      child: Row(
+      child: Column(
         children: [
-          // USB Icon
-          Icon(
-            Symbols.usb,
-            size: 28,
-            color: isConnected ? AppColors.primary : AppColors.textSecondary,
-          ),
-          const SizedBox(width: 8),
-
-          // Add button
-          if (isConnected)
-            GestureDetector(
-              onTap: () => Navigator.of(context).pushNamed('/add'),
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Symbols.add,
-                  size: 20,
-                  color: Colors.white,
-                ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isConnected ? Symbols.usb : Symbols.usb_off,
+                size: 20,
+                color: isConnected ? AppColors.success : AppColors.textSecondary,
               ),
-            ),
-          const SizedBox(width: 12),
-
-          // Center: Status and Device Name
-          Expanded(
-            child: Column(
-              children: [
-                Text(
-                  isConnected
-                      ? 'CONNECTED'
-                      : connection.status == conn.ConnectionState.connecting
-                          ? 'CONNECTING...'
-                          : 'NO YUBIKEY',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.5,
+              const SizedBox(width: 8),
+              Text(
+                connection.yubiKeyInfo?.deviceName ?? 'No YubiKey',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              if (isConnected) ...[
+                const SizedBox(width: 8),
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: AppColors.success,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.success.withValues(alpha: 0.5),
+                        blurRadius: 4,
                       ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  connection.yubiKeyInfo?.deviceName ?? 'Authenticator',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.5,
-                      ),
+                    ],
+                  ),
                 ),
               ],
-            ),
+            ],
           ),
-
-          // Connection status indicator
           if (isConnected)
-            Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(
-                color: AppColors.success,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.success.withValues(alpha: 0.5),
-                    blurRadius: 8,
-                  ),
-                ],
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Connected',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
               ),
             ),
         ],
@@ -275,23 +258,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildSearchBar(BuildContext context, bool isDark) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Container(
         decoration: BoxDecoration(
           color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isDark
-                ? Colors.white.withValues(alpha: 0.05)
+                ? Colors.white.withValues(alpha: 0.08)
                 : Colors.grey.shade200,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
         child: TextField(
           onChanged: (value) => setState(() => _searchQuery = value),
@@ -304,6 +280,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             filled: false,
             border: InputBorder.none,
+            focusedBorder: InputBorder.none,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),

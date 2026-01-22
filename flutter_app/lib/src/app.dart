@@ -17,7 +17,7 @@ class GoshAuthenticatorApp extends ConsumerWidget {
     final isTouchRequired = ref.watch(isTouchRequiredProvider);
 
     return MaterialApp(
-      title: 'Yubico Authenticator',
+      title: 'Gosh Yubikey Manager',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),

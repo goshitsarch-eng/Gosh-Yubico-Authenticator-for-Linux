@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.github.gosh" "\0"
-            VALUE "FileDescription", "gosh_authenticator" "\0"
+            VALUE "FileDescription", "Gosh Yubikey Manager" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "gosh_authenticator" "\0"
+            VALUE "InternalName", "gosh_yubikey_manager" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.github.gosh. All rights reserved." "\0"
-            VALUE "OriginalFilename", "gosh_authenticator.exe" "\0"
-            VALUE "ProductName", "gosh_authenticator" "\0"
+            VALUE "OriginalFilename", "gosh_yubikey_manager.exe" "\0"
+            VALUE "ProductName", "Gosh Yubikey Manager" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

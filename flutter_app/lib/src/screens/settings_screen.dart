@@ -114,13 +114,14 @@ class SettingsScreen extends ConsumerWidget {
 
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: 8),
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
       child: Text(
         title.toUpperCase(),
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: AppColors.primary,
               fontWeight: FontWeight.bold,
-              letterSpacing: 1,
+              letterSpacing: 1.2,
+              fontSize: 13,
             ),
       ),
     );
@@ -146,11 +147,11 @@ class SettingsScreen extends ConsumerWidget {
 
     return ListTile(
       leading: Container(
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: isDark ? 0.2 : 0.1),
-          borderRadius: BorderRadius.circular(10),
+          color: AppColors.primary.withValues(alpha: isDark ? 0.15 : 0.08),
+          borderRadius: BorderRadius.circular(14),
         ),
         child: Icon(
           icon,
@@ -211,7 +212,7 @@ class SettingsScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          'Yubico Authenticator',
+          'Gosh Yubikey Manager',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: AppColors.textSecondary,
               ),
