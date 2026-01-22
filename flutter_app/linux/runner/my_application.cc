@@ -53,6 +53,19 @@ static void my_application_activate(GApplication* application) {
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(project, self->dart_entrypoint_arguments);
 
+  // Set window icon
+  const gchar* assets_path = fl_dart_project_get_assets_path(project);
+  g_autofree gchar* icon_path = g_build_filename(assets_path, "assets", "app_icon.png", nullptr);
+  GError* error = nullptr;
+  GdkPixbuf* icon = gdk_pixbuf_new_from_file(icon_path, &error);
+  if (icon) {
+    gtk_window_set_icon(window, icon);
+    g_object_unref(icon);
+  } else {
+    g_warning("Failed to load icon: %s", error->message);
+    g_error_free(error);
+  }
+
   FlView* view = fl_view_new(project);
   gtk_widget_show(GTK_WIDGET(view));
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
