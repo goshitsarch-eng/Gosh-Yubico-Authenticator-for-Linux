@@ -6,6 +6,11 @@ A Flutter + Rust desktop application for managing OATH (TOTP/HOTP) credentials o
 
 Manage OATH credentials with TOTP/HOTP code generation, password-protected YubiKeys, touch-required credentials, and clipboard integration.
 
+## Screenshots
+
+![Gosh YubiKey Manager – Credentials View](screenshots/img1.png)
+
+
 ## Quick Start
 
 **Prerequisites:** Install `pcscd` (PC/SC Smart Card Daemon) for YubiKey communication.
