@@ -51,7 +51,11 @@ jobs:
           sudo apt-get install -y \
             clang cmake ninja-build pkg-config \
             libgtk-3-dev libpcsclite-dev \
-            rpm
+            rpm dpkg-dev
+
+      - name: Prepare dist (x64)
+        if: matrix.arch == 'x64'
+        run: mkdir -p dist
 
       - name: Install Rust (x64)
         if: matrix.arch == 'x64'
@@ -72,7 +76,13 @@ jobs:
 
       - name: Build RPM (x64)
         if: matrix.arch == 'x64'
-        run: ./build-rpm.sh
+        run: |
+          RPMBUILD_TOPDIR="${{ github.workspace }}/rpmbuild" \
+            ./build-rpm.sh "${{ steps.version.outputs.VERSION }}"
+
+      - name: Build DEB (x64)
+        if: matrix.arch == 'x64'
+        run: ./build-deb.sh "${{ steps.version.outputs.VERSION }}" amd64
 
       - name: Create tarball (x64)
         if: matrix.arch == 'x64'
@@ -85,8 +95,8 @@ jobs:
           cp ../../../../../icon.svg "/tmp/${TARBALL_NAME}/"
           cp ../../../../../README.md "/tmp/${TARBALL_NAME}/"
           cd /tmp
-          tar -czf "${TARBALL_NAME}.tar.gz" "${TARBALL_NAME}"
-          mv "${TARBALL_NAME}.tar.gz" "${{ github.workspace }}/dist/"
+           tar -czf "${TARBALL_NAME}.tar.gz" "${TARBALL_NAME}"
+           mv "${TARBALL_NAME}.tar.gz" "${{ github.workspace }}/dist/"
 
       # arm64 cross-compile build
       - name: Build packages (arm64)
@@ -103,7 +113,10 @@ jobs:
                 curl git unzip xz-utils zip \
                 clang cmake ninja-build pkg-config \
                 libgtk-3-dev libpcsclite-dev \
-                rpm && \
+                rpm dpkg-dev && \
+
+              mkdir -p dist rpmbuild && \
+              export RPMBUILD_TOPDIR=/workspace/rpmbuild && \
               
               # Install Flutter
               git clone https://github.com/flutter/flutter.git -b stable --depth 1 && \
@@ -121,7 +134,10 @@ jobs:
               cd .. && \
               
               # Build RPM
-              ./build-rpm.sh && \
+              ./build-rpm.sh '${{ steps.version.outputs.VERSION }}' && \
+
+              # Build DEB
+              ./build-deb.sh '${{ steps.version.outputs.VERSION }}' arm64 && \
               
               # Create tarball
               cd flutter_app/build/linux/arm64/release && \
@@ -140,10 +156,12 @@ jobs:
         run: |
           mkdir -p release-${{ matrix.arch }}
           if [ "${{ matrix.arch }}" = "x64" ]; then
-            cp ~/rpmbuild/RPMS/x86_64/*.rpm release-${{ matrix.arch }}/
+            cp rpmbuild/RPMS/x86_64/*.rpm release-${{ matrix.arch }}/
+            cp dist/*_amd64.deb release-${{ matrix.arch }}/
             cp dist/*-x64.tar.gz release-${{ matrix.arch }}/
           else
-            cp ~/rpmbuild/RPMS/aarch64/*.rpm release-${{ matrix.arch }}/ 2>/dev/null || true
+            cp rpmbuild/RPMS/aarch64/*.rpm release-${{ matrix.arch }}/ 2>/dev/null || true
+            cp dist/*_arm64.deb release-${{ matrix.arch }}/ 2>/dev/null || true
             cp dist/*-arm64.tar.gz release-${{ matrix.arch }}/ 2>/dev/null || true
           fi
           ls -lh release-${{ matrix.arch }}/
@@ -171,7 +189,7 @@ jobs:
       - name: Prepare release files
         run: |
           mkdir -p release
-          find artifacts -type f \( -name "*.rpm" -o -name "*.tar.gz" \) -exec cp {} release/ \;
+          find artifacts -type f \( -name "*.rpm" -o -name "*.deb" -o -name "*.tar.gz" \) -exec cp {} release/ \;
           cd release
           sha256sum * > SHA256SUMS
           ls -lh
@@ -192,15 +210,19 @@ jobs:
             
             **x86_64 / x64:**
             - `gosh-authenticator-${{ steps.version.outputs.VERSION }}-1.fc43.x86_64.rpm` - RPM package for Fedora/RHEL
+            - `gosh-authenticator_${{ steps.version.outputs.VERSION }}_amd64.deb` - DEB package for Debian/Ubuntu
             - `gosh-authenticator-${{ steps.version.outputs.VERSION }}-linux-x64.tar.gz` - Portable tarball
             
             **ARM64 / aarch64:**
             - `gosh-authenticator-${{ steps.version.outputs.VERSION }}-1.fc43.aarch64.rpm` - RPM package for Fedora/RHEL
+            - `gosh-authenticator_${{ steps.version.outputs.VERSION }}_arm64.deb` - DEB package for Debian/Ubuntu
             - `gosh-authenticator-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz` - Portable tarball
             
             ### Installation
             
             **RPM:** `sudo dnf install gosh-authenticator-*.rpm`
+
+            **DEB:** `sudo apt install ./gosh-authenticator_*.deb`
             
             **Tarball:** Extract and run `./gosh_yubikey_manager`
             

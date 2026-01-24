@@ -5,7 +5,12 @@ set -e
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 NAME="gosh-authenticator"
-VERSION="1.2.0"
+VERSION_DEFAULT="1.2.0"
+VERSION="${1:-${VERSION:-$VERSION_DEFAULT}}"
+
+# Where rpmbuild writes BUILD/RPMS/SOURCES/etc.
+# Set RPMBUILD_TOPDIR to keep artifacts inside the repo (useful for CI).
+TOPDIR="${RPMBUILD_TOPDIR:-$HOME/rpmbuild}"
 
 echo "===================================="
 echo "Building Gosh Authenticator RPM"
@@ -32,7 +37,7 @@ fi
 
 # Setup RPM build environment
 echo "Setting up RPM build environment..."
-mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+mkdir -p "$TOPDIR"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
 # Create source tarball
 echo "Creating source tarball..."
@@ -48,28 +53,38 @@ tar --exclude='.git' \
     --exclude='rust/target' \
     --exclude='*.swp' \
     --exclude='*.kate-swp' \
-    -czf ~/rpmbuild/SOURCES/${NAME}-${VERSION}.tar.gz \
+    -czf "$TOPDIR/SOURCES/${NAME}-${VERSION}.tar.gz" \
     "${NAME}-${VERSION}"
 rm -rf "$TEMP_DIR"
 
 # Copy spec file
 echo "Copying spec file..."
-cp "$PROJECT_DIR/${NAME}.spec" ~/rpmbuild/SPECS/
+sed -E "s/^Version:[[:space:]]+.*/Version:        ${VERSION}/" \
+  "$PROJECT_DIR/${NAME}.spec" > "$TOPDIR/SPECS/${NAME}.spec"
 
 # Build RPM
 echo "Building RPM package..."
-cd ~/rpmbuild/SPECS
-rpmbuild -bb --nodeps ${NAME}.spec
+rpmbuild -bb --nodeps \
+  --define "_topdir $TOPDIR" \
+  "$TOPDIR/SPECS/${NAME}.spec"
 
 echo ""
 echo "===================================="
 echo "Build complete!"
 echo "===================================="
 echo "RPM package location:"
-ls -lh ~/rpmbuild/RPMS/x86_64/${NAME}-*.rpm
+
+RPM_ARCH="$(rpm --eval '%{_arch}' 2>/dev/null || uname -m)"
+if compgen -G "$TOPDIR/RPMS/$RPM_ARCH/${NAME}-*.rpm" > /dev/null; then
+  ls -lh "$TOPDIR/RPMS/$RPM_ARCH/${NAME}-"*.rpm
+else
+  echo "No RPMs found in: $TOPDIR/RPMS/$RPM_ARCH/"
+  echo "Available RPM output directories:"
+  ls -1 "$TOPDIR/RPMS" || true
+fi
 echo ""
 echo "To install:"
-echo "  sudo dnf install ~/rpmbuild/RPMS/x86_64/${NAME}-${VERSION}-*.rpm"
+echo "  sudo dnf install $TOPDIR/RPMS/$RPM_ARCH/${NAME}-${VERSION}-*.rpm"
 echo ""
 echo "Or to test install:"
-echo "  sudo rpm -ivh ~/rpmbuild/RPMS/x86_64/${NAME}-${VERSION}-*.rpm"
+echo "  sudo rpm -ivh $TOPDIR/RPMS/$RPM_ARCH/${NAME}-${VERSION}-*.rpm"
