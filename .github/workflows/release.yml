@@ -7,7 +7,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  FLUTTER_VERSION: '3.27.1'
+  FLUTTER_VERSION: '3.27.3'
 
 jobs:
   build-packages:
@@ -50,6 +50,9 @@ jobs:
           flutter config --no-analytics
           flutter --version
           echo "$(pwd)/flutter/bin" >> "$GITHUB_PATH"
+
+      - name: Disable Flutter analytics
+        run: flutter config --no-analytics
 
       - name: Install dependencies
         run: |
