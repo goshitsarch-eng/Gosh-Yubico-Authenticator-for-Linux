@@ -7,7 +7,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  FLUTTER_VERSION: '3.27.3'
+  FLUTTER_VERSION: '3.38.7'
 
 jobs:
   build-packages:
@@ -36,23 +36,12 @@ jobs:
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
 
       - name: Install Flutter
-        if: matrix.arch == 'x64'
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-
-      - name: Install Flutter (arm64)
-        if: matrix.arch == 'arm64'
         run: |
-          git clone https://github.com/flutter/flutter.git -b "${FLUTTER_VERSION}" --depth 1
-          export PATH="$(pwd)/flutter/bin:$PATH"
+          git clone https://github.com/flutter/flutter.git -b "${FLUTTER_VERSION}" --depth 1 flutter
+          export PATH="${GITHUB_WORKSPACE}/flutter/bin:$PATH"
           flutter config --no-analytics
           flutter --version
-          echo "$(pwd)/flutter/bin" >> "$GITHUB_PATH"
-
-      - name: Disable Flutter analytics
-        run: flutter config --no-analytics
+          echo "${GITHUB_WORKSPACE}/flutter/bin" >> "$GITHUB_PATH"
 
       - name: Install dependencies
         run: |
