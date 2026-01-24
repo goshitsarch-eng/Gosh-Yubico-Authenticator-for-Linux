@@ -1,8 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Gosh Yubikey Manager (Dev)
-Exec=/home/gosh/Documents/GitHub/Gosh-Yubico-Authenticator-for-Linux/flutter_app/build/linux/x64/debug/bundle/gosh_yubikey_manager
-Icon=/home/gosh/Documents/GitHub/Gosh-Yubico-Authenticator-for-Linux/flutter_app/assets/app_icon.png
-Terminal=false
-StartupWMClass=com.github.gosh.gosh_yubikey_manager
-Categories=Utility;Security;

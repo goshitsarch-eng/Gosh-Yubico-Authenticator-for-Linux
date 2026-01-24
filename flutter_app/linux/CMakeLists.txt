@@ -161,3 +161,20 @@ add_dependencies(${BINARY_NAME} rust_core)
 install(FILES ${RUST_LIB_PATH}
   DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
   COMPONENT Runtime)
+
+# === Desktop Integration ===
+# Install desktop file and icon for system-wide installations
+if(NOT CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  # Desktop file installation
+  set(DESKTOP_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../com.github.gosh.gosh_yubikey_manager.desktop")
+  install(FILES ${DESKTOP_FILE}
+    DESTINATION "share/applications"
+    COMPONENT Runtime)
+  
+  # Icon installation (SVG for scalability)
+  set(ICON_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../../icon.svg")
+  install(FILES ${ICON_FILE}
+    DESTINATION "share/icons/hicolor/scalable/apps"
+    RENAME "com.github.gosh.gosh_yubikey_manager.svg"
+    COMPONENT Runtime)
+endif()

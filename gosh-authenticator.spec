@@ -71,27 +71,18 @@ exec /usr/lib64/gosh-authenticator/gosh_yubikey_manager "$@"
 EOF
 chmod +x %{buildroot}%{_bindir}/gosh-authenticator
 
-# Install desktop file
-cat > %{buildroot}%{_datadir}/applications/gosh-authenticator.desktop << 'EOF'
-[Desktop Entry]
-Name=Gosh Authenticator
-Comment=Manage OATH credentials on YubiKey devices
-Exec=gosh-authenticator
-Icon=gosh-authenticator
-Terminal=false
-Type=Application
-Categories=Utility;Security;
-Keywords=yubikey;authenticator;2fa;totp;hotp;
-EOF
+# Install desktop file with correct app ID name
+install -Dm644 flutter_app/com.github.gosh.gosh_yubikey_manager.desktop \
+  %{buildroot}%{_datadir}/applications/com.github.gosh.gosh_yubikey_manager.desktop
 
 # Install icon
-install -Dm644 icon.svg %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/gosh-authenticator.svg
+install -Dm644 icon.svg %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/com.github.gosh.gosh_yubikey_manager.svg
 
 %files
 %{_bindir}/gosh-authenticator
 %{_libdir}/%{name}/
-%{_datadir}/applications/gosh-authenticator.desktop
-%{_datadir}/icons/hicolor/scalable/apps/gosh-authenticator.svg
+%{_datadir}/applications/com.github.gosh.gosh_yubikey_manager.desktop
+%{_datadir}/icons/hicolor/scalable/apps/com.github.gosh.gosh_yubikey_manager.svg
 
 %post
 /usr/bin/update-desktop-database &> /dev/null || :
