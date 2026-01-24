@@ -29,6 +29,39 @@ A Flutter + Rust desktop application for managing OATH (TOTP/HOTP) credentials s
 
 > Note: The build uses Flutter's desktop tooling and compiles the Rust core as a shared library.
 
+### System-Wide Installation
+
+For proper desktop integration (especially on KDE Plasma Wayland), install to a system directory:
+
+```bash
+cd flutter_app
+flutter build linux --release
+cd build/linux/x64/release
+sudo cmake --install . --prefix /usr/local
+```
+
+This will install:
+- Binary: `/usr/local/bin/gosh_yubikey_manager`
+- Libraries: `/usr/local/lib/`
+- Desktop file: `/usr/local/share/applications/com.github.gosh.gosh_yubikey_manager.desktop`
+- Icon: `/usr/local/share/icons/hicolor/scalable/apps/com.github.gosh.gosh_yubikey_manager.svg`
+
+After installation, update the desktop database:
+```bash
+sudo update-desktop-database /usr/local/share/applications
+sudo gtk-update-icon-cache /usr/local/share/icons/hicolor
+```
+
+### Development Build (Local Bundle)
+
+For development, the default build creates a relocatable bundle:
+
+```bash
+cd flutter_app
+flutter build linux --release
+./build/linux/x64/release/bundle/gosh_yubikey_manager
+```
+
 ### Ubuntu/Debian
 
 ```bash
