@@ -71,8 +71,11 @@ exec /usr/lib64/gosh-authenticator/gosh_yubikey_manager "$@"
 EOF
 chmod +x %{buildroot}%{_bindir}/gosh-authenticator
 
-# Install desktop file with correct app ID name
+# Install desktop file with correct app ID name and fix Exec path
 install -Dm644 flutter_app/com.github.gosh.gosh_yubikey_manager.desktop \
+  %{buildroot}%{_datadir}/applications/com.github.gosh.gosh_yubikey_manager.desktop
+# Update Exec path to use the wrapper script
+sed -i 's|Exec=gosh_yubikey_manager|Exec=gosh-authenticator|' \
   %{buildroot}%{_datadir}/applications/com.github.gosh.gosh_yubikey_manager.desktop
 
 # Install icon
