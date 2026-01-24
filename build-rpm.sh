@@ -55,7 +55,7 @@ cp "$PROJECT_DIR/${NAME}.spec" ~/rpmbuild/SPECS/
 # Build RPM
 echo "Building RPM package..."
 cd ~/rpmbuild/SPECS
-rpmbuild -bb ${NAME}.spec
+rpmbuild -bb --nodeps ${NAME}.spec
 
 echo ""
 echo "===================================="
