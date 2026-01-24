@@ -166,8 +166,15 @@ install(FILES ${RUST_LIB_PATH}
 # Install desktop file and icon for system-wide installations
 if(NOT CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   # Desktop file installation
-  set(DESKTOP_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../com.github.gosh.gosh_yubikey_manager.desktop")
-  install(FILES ${DESKTOP_FILE}
+  set(DESKTOP_FILE_IN "${CMAKE_CURRENT_SOURCE_DIR}/../com.github.gosh.gosh_yubikey_manager.desktop")
+  set(DESKTOP_FILE_OUT "${CMAKE_CURRENT_BINARY_DIR}/com.github.gosh.gosh_yubikey_manager.desktop")
+  
+  # Configure desktop file with correct binary path
+  file(READ ${DESKTOP_FILE_IN} DESKTOP_CONTENT)
+  string(REPLACE "Exec=gosh_yubikey_manager" "Exec=${CMAKE_INSTALL_PREFIX}/gosh_yubikey_manager" DESKTOP_CONTENT "${DESKTOP_CONTENT}")
+  file(WRITE ${DESKTOP_FILE_OUT} "${DESKTOP_CONTENT}")
+  
+  install(FILES ${DESKTOP_FILE_OUT}
     DESTINATION "share/applications"
     COMPONENT Runtime)
   
