@@ -1,225 +1,163 @@
-name: Release
+name: Release Build
 
 on:
   push:
     tags:
-      - 'v*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version for release (e.g., 0.1.0)'
-        required: true
-        type: string
+      - 'v*.*.*'
 
 env:
   CARGO_TERM_COLOR: always
+  FLUTTER_VERSION: '3.24.0'
 
 jobs:
-  build:
-    name: Build (${{ matrix.arch }})
-    runs-on: ubuntu-latest
+  build-packages:
+    name: Build ${{ matrix.arch }} packages
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         include:
-          - arch: x86_64
-            target: x86_64-unknown-linux-gnu
-            docker_platform: ""
-          - arch: aarch64
-            target: aarch64-unknown-linux-gnu
-            docker_platform: linux/arm64
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      # x86_64 native build
-      - name: Install dependencies (x86_64)
-        if: matrix.arch == 'x86_64'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libgtk-4-dev \
-            libadwaita-1-dev \
-            libpcsclite-dev \
-            pkg-config
-
-      - name: Install Rust toolchain (x86_64)
-        if: matrix.arch == 'x86_64'
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Build (x86_64)
-        if: matrix.arch == 'x86_64'
-        run: cargo build --release
-
-      # aarch64 cross-compilation via Docker/QEMU
-      - name: Set up QEMU
-        if: matrix.arch == 'aarch64'
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        if: matrix.arch == 'aarch64'
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build (aarch64)
-        if: matrix.arch == 'aarch64'
-        run: |
-          docker run --rm --platform linux/arm64 \
-            -v "${{ github.workspace }}:/workspace" \
-            -w /workspace \
-            ubuntu:24.04 \
-            bash -c "
-              apt-get update && \
-              apt-get install -y \
-                curl \
-                build-essential \
-                pkg-config \
-                libgtk-4-dev \
-                libadwaita-1-dev \
-                libpcsclite-dev && \
-              curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
-              source ~/.cargo/env && \
-              cargo build --release
-            "
-
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: binary-${{ matrix.arch }}
-          path: target/release/gosh-authenticator
-          retention-days: 1
-
-  package:
-    name: Package (${{ matrix.arch }})
-    needs: build
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - arch: x86_64
-            deb_arch: amd64
+          - arch: x64
             rpm_arch: x86_64
-            docker_platform: ""
-          - arch: aarch64
-            deb_arch: arm64
+          - arch: arm64
             rpm_arch: aarch64
-            docker_platform: linux/arm64
-
+    
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download binary
-        uses: actions/download-artifact@v4
-        with:
-          name: binary-${{ matrix.arch }}
-          path: target/release/
-
-      - name: Make binary executable
-        run: chmod +x target/release/gosh-authenticator
-
-      - name: Get version
+      - name: Get version from tag
         id: version
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
-          else
-            echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
-          fi
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
 
-      # x86_64 packaging (native)
-      - name: Install Rust toolchain (x86_64)
-        if: matrix.arch == 'x86_64'
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install packaging tools (x86_64)
-        if: matrix.arch == 'x86_64'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libgtk-4-dev \
-            libadwaita-1-dev \
-            libpcsclite-dev \
-            pkg-config
-          cargo install cargo-deb cargo-generate-rpm
-
-      - name: Build DEB package (x86_64)
-        if: matrix.arch == 'x86_64'
-        run: cargo deb --no-build
-
-      - name: Build RPM package (x86_64)
-        if: matrix.arch == 'x86_64'
-        run: cargo generate-rpm
-
-      # aarch64 packaging via Docker/QEMU
       - name: Set up QEMU
-        if: matrix.arch == 'aarch64'
+        if: matrix.arch == 'arm64'
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        if: matrix.arch == 'aarch64'
+        if: matrix.arch == 'arm64'
         uses: docker/setup-buildx-action@v3
 
-      - name: Build packages (aarch64)
-        if: matrix.arch == 'aarch64'
+      # x64 native build
+      - name: Install Flutter (x64)
+        if: matrix.arch == 'x64'
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - name: Install dependencies (x64)
+        if: matrix.arch == 'x64'
         run: |
-          docker run --rm --platform linux/arm64 \
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang cmake ninja-build pkg-config \
+            libgtk-3-dev libpcsclite-dev \
+            rpm rpmbuild
+
+      - name: Install Rust (x64)
+        if: matrix.arch == 'x64'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Flutter app (x64)
+        if: matrix.arch == 'x64'
+        run: |
+          cd flutter_app
+          flutter pub get
+          flutter build linux --release
+
+      - name: Build RPM (x64)
+        if: matrix.arch == 'x64'
+        run: ./build-rpm.sh
+
+      - name: Create tarball (x64)
+        if: matrix.arch == 'x64'
+        run: |
+          cd flutter_app/build/linux/x64/release
+          TARBALL_NAME="gosh-authenticator-${{ steps.version.outputs.VERSION }}-linux-x64"
+          mkdir -p "/tmp/${TARBALL_NAME}"
+          cp -r bundle/* "/tmp/${TARBALL_NAME}/"
+          cp ../../../../com.github.gosh.gosh_yubikey_manager.desktop "/tmp/${TARBALL_NAME}/"
+          cp ../../../../../icon.svg "/tmp/${TARBALL_NAME}/"
+          cp ../../../../../README.md "/tmp/${TARBALL_NAME}/"
+          cd /tmp
+          tar -czf "${TARBALL_NAME}.tar.gz" "${TARBALL_NAME}"
+          mv "${TARBALL_NAME}.tar.gz" "${{ github.workspace }}/dist/"
+
+      # arm64 cross-compile build
+      - name: Build packages (arm64)
+        if: matrix.arch == 'arm64'
+        run: |
+          docker run --rm --platform linux/arm64/v8 \
             -v "${{ github.workspace }}:/workspace" \
             -w /workspace \
-            ubuntu:24.04 \
+            ubuntu:22.04 \
             bash -c "
+              export DEBIAN_FRONTEND=noninteractive
               apt-get update && \
               apt-get install -y \
-                curl \
-                build-essential \
-                pkg-config \
-                libgtk-4-dev \
-                libadwaita-1-dev \
-                libpcsclite-dev && \
+                curl git unzip xz-utils zip \
+                clang cmake ninja-build pkg-config \
+                libgtk-3-dev libpcsclite-dev \
+                rpm rpmbuild && \
+              
+              # Install Flutter
+              curl -o flutter.tar.xz https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${{ env.FLUTTER_VERSION }}-stable.tar.xz && \
+              tar -xf flutter.tar.xz && \
+              export PATH=\$PATH:\$(pwd)/flutter/bin && \
+              flutter config --no-analytics && \
+              
+              # Install Rust
               curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
               source ~/.cargo/env && \
-              cargo install cargo-deb cargo-generate-rpm && \
-              cargo deb --no-build && \
-              cargo generate-rpm
+              
+              # Build Flutter app
+              cd flutter_app && \
+              flutter pub get && \
+              flutter build linux --release && \
+              cd .. && \
+              
+              # Build RPM
+              ./build-rpm.sh && \
+              
+              # Create tarball
+              cd flutter_app/build/linux/arm64/release && \
+              TARBALL_NAME='gosh-authenticator-${{ steps.version.outputs.VERSION }}-linux-arm64' && \
+              mkdir -p /tmp/\${TARBALL_NAME} && \
+              cp -r bundle/* /tmp/\${TARBALL_NAME}/ && \
+              cp ../../../../com.github.gosh.gosh_yubikey_manager.desktop /tmp/\${TARBALL_NAME}/ && \
+              cp ../../../../../icon.svg /tmp/\${TARBALL_NAME}/ && \
+              cp ../../../../../README.md /tmp/\${TARBALL_NAME}/ && \
+              cd /tmp && \
+              tar -czf \${TARBALL_NAME}.tar.gz \${TARBALL_NAME} && \
+              mv \${TARBALL_NAME}.tar.gz /workspace/dist/
             "
 
-      - name: Create tarball
+      - name: Prepare artifacts
         run: |
-          mkdir -p dist/gosh-authenticator-${{ steps.version.outputs.version }}
-          cp target/release/gosh-authenticator dist/gosh-authenticator-${{ steps.version.outputs.version }}/
-          cp data/com.github.gosh.authenticator.desktop dist/gosh-authenticator-${{ steps.version.outputs.version }}/
-          cp -r data/icons dist/gosh-authenticator-${{ steps.version.outputs.version }}/
-          cp README.md dist/gosh-authenticator-${{ steps.version.outputs.version }}/
-          cd dist
-          tar -czvf gosh-authenticator-${{ steps.version.outputs.version }}-${{ matrix.arch }}.tar.gz gosh-authenticator-${{ steps.version.outputs.version }}
+          mkdir -p release-${{ matrix.arch }}
+          if [ "${{ matrix.arch }}" = "x64" ]; then
+            cp ~/rpmbuild/RPMS/x86_64/*.rpm release-${{ matrix.arch }}/
+            cp dist/*-x64.tar.gz release-${{ matrix.arch }}/
+          else
+            cp ~/rpmbuild/RPMS/aarch64/*.rpm release-${{ matrix.arch }}/ 2>/dev/null || true
+            cp dist/*-arm64.tar.gz release-${{ matrix.arch }}/ 2>/dev/null || true
+          fi
+          ls -lh release-${{ matrix.arch }}/
 
-      - name: Upload DEB artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: deb-${{ matrix.arch }}
-          path: target/debian/*.deb
+          name: packages-${{ matrix.arch }}
+          path: release-${{ matrix.arch }}/*
           retention-days: 1
 
-      - name: Upload RPM artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: rpm-${{ matrix.arch }}
-          path: target/generate-rpm/*.rpm
-          retention-days: 1
-
-      - name: Upload tarball artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: tarball-${{ matrix.arch }}
-          path: dist/*.tar.gz
-          retention-days: 1
-
-  release:
-    name: Create Release
-    needs: package
-    runs-on: ubuntu-latest
+  create-release:
+    name: Create GitHub Release
+    needs: build-packages
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
-
+    
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -229,27 +167,45 @@ jobs:
       - name: Prepare release files
         run: |
           mkdir -p release
-          find artifacts -name "*.deb" -exec cp {} release/ \;
-          find artifacts -name "*.rpm" -exec cp {} release/ \;
-          find artifacts -name "*.tar.gz" -exec cp {} release/ \;
-          ls -la release/
+          find artifacts -type f \( -name "*.rpm" -o -name "*.tar.gz" \) -exec cp {} release/ \;
+          cd release
+          sha256sum * > SHA256SUMS
+          ls -lh
+          cat SHA256SUMS
 
-      - name: Determine if prerelease
-        id: prerelease
-        run: |
-          VERSION="${{ inputs.version || github.ref_name }}"
-          if [[ "$VERSION" =~ (alpha|beta|rc) ]]; then
-            echo "prerelease=true" >> $GITHUB_OUTPUT
-          else
-            echo "prerelease=false" >> $GITHUB_OUTPUT
-          fi
+      - name: Get version
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
 
-      - name: Create GitHub Release
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.version && format('v{0}', inputs.version) || github.ref_name }}
+          name: Release ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## Gosh Authenticator v${{ steps.version.outputs.VERSION }}
+            
+            ### Downloads
+            
+            **x86_64 / x64:**
+            - `gosh-authenticator-${{ steps.version.outputs.VERSION }}-1.fc43.x86_64.rpm` - RPM package for Fedora/RHEL
+            - `gosh-authenticator-${{ steps.version.outputs.VERSION }}-linux-x64.tar.gz` - Portable tarball
+            
+            **ARM64 / aarch64:**
+            - `gosh-authenticator-${{ steps.version.outputs.VERSION }}-1.fc43.aarch64.rpm` - RPM package for Fedora/RHEL
+            - `gosh-authenticator-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz` - Portable tarball
+            
+            ### Installation
+            
+            **RPM:** `sudo dnf install gosh-authenticator-*.rpm`
+            
+            **Tarball:** Extract and run `./gosh_yubikey_manager`
+            
+            See [README](https://github.com/${{ github.repository }}/blob/main/README.md) for full installation instructions.
+            
+            ### Checksums
+            Verify downloads with `sha256sum -c SHA256SUMS`
           files: release/*
-          prerelease: ${{ steps.prerelease.outputs.prerelease }}
-          generate_release_notes: true
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
