@@ -8,6 +8,7 @@ import 'package:yaru/yaru.dart';
 
 import 'providers/providers.dart';
 import 'screens/screens.dart';
+import 'windows_ui/windows_app.dart';
 import 'widgets/widgets.dart';
 
 /// Main application widget.
@@ -21,6 +22,11 @@ class GoshAuthenticatorApp extends ConsumerWidget {
     final isTouchRequired = ref.watch(isTouchRequiredProvider);
 
     final isLinux = !kIsWeb && Platform.isLinux;
+    final isWindows = !kIsWeb && Platform.isWindows;
+
+    if (isWindows) {
+      return const WindowsApp();
+    }
 
     if (isLinux) {
       return YaruTheme(

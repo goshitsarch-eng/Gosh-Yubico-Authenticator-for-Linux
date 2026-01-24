@@ -219,7 +219,7 @@ class SettingsScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'Version 1.0.0',
+          'Version 1.2.0',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: isDark ? Colors.grey.shade700 : Colors.grey.shade400,
               ),

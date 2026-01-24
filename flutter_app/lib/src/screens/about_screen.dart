@@ -53,7 +53,7 @@ class AboutScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Version 1.0.0',
+              'Version 1.2.0',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -187,7 +187,7 @@ class AboutScreen extends StatelessWidget {
             onTap: () => showLicensePage(
               context: context,
               applicationName: 'Gosh Yubikey Manager',
-              applicationVersion: '1.0.0',
+              applicationVersion: '1.2.0',
             ),
           ),
         ],

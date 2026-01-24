@@ -5,7 +5,7 @@ set -e
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 NAME="gosh-authenticator"
-VERSION="1.0.0"
+VERSION="1.2.0"
 
 echo "===================================="
 echo "Building Gosh Authenticator RPM"
@@ -40,7 +40,11 @@ TEMP_DIR=$(mktemp -d)
 cp -r "$PROJECT_DIR" "$TEMP_DIR/${NAME}-${VERSION}"
 cd "$TEMP_DIR"
 tar --exclude='.git' \
+    --exclude='flutter_app/.dart_tool' \
     --exclude='flutter_app/build' \
+    --exclude='flutter_app/linux/flutter/ephemeral' \
+    --exclude='flutter_app/windows/flutter/ephemeral' \
+    --exclude='flutter_app/macos/Flutter/ephemeral' \
     --exclude='rust/target' \
     --exclude='*.swp' \
     --exclude='*.kate-swp' \

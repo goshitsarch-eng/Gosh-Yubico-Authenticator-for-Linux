@@ -1,5 +1,5 @@
 Name:           gosh-authenticator
-Version:        1.0.0
+Version:        1.2.0
 Release:        1%{?dist}
 Summary:        A desktop application for managing OATH credentials on YubiKey devices
 License:        MIT
@@ -96,5 +96,8 @@ install -Dm644 icon.svg %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/com.
 /usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &> /dev/null || :
 
 %changelog
-* Thu Jan 23 2026 Builder <builder@localhost> - 1.0.0-1
+* Sat Jan 24 2026 Builder <builder@localhost> - 1.2.0-1
+- Update to v1.2.0
+
+* Fri Jan 23 2026 Builder <builder@localhost> - 1.0.0-1
 - Initial RPM package
