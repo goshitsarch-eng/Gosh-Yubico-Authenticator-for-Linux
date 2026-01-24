@@ -42,7 +42,6 @@ jobs:
         if: matrix.arch == 'x64'
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
 
       - name: Install dependencies (x64)
@@ -101,7 +100,7 @@ jobs:
                 rpm && \
               
               # Install Flutter
-              curl -o flutter.tar.xz https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${{ env.FLUTTER_VERSION }}-stable.tar.xz && \
+              curl -o flutter.tar.xz https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_arm64_stable.tar.xz && \
               tar -xf flutter.tar.xz && \
               export PATH=\$PATH:\$(pwd)/flutter/bin && \
               flutter config --no-analytics && \
