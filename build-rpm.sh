@@ -36,13 +36,17 @@ mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
 # Create source tarball
 echo "Creating source tarball..."
-cd "$PROJECT_DIR/.."
+TEMP_DIR=$(mktemp -d)
+cp -r "$PROJECT_DIR" "$TEMP_DIR/${NAME}-${VERSION}"
+cd "$TEMP_DIR"
 tar --exclude='.git' \
     --exclude='flutter_app/build' \
     --exclude='rust/target' \
     --exclude='*.swp' \
+    --exclude='*.kate-swp' \
     -czf ~/rpmbuild/SOURCES/${NAME}-${VERSION}.tar.gz \
-    "$(basename "$PROJECT_DIR")"
+    "${NAME}-${VERSION}"
+rm -rf "$TEMP_DIR"
 
 # Copy spec file
 echo "Copying spec file..."
