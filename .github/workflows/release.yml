@@ -90,9 +90,9 @@ jobs:
       - name: Prepare artifacts
         run: |
           mkdir -p release-${{ matrix.arch }}
-          cp "rpmbuild/RPMS/${{ matrix.rpm_arch }}"/*.rpm "release-${{ matrix.arch }}/"
-          cp "dist/*_${{ matrix.deb_arch }}.deb" "release-${{ matrix.arch }}/"
-          cp "dist/*-${{ matrix.arch }}.tar.gz" "release-${{ matrix.arch }}/"
+          cp rpmbuild/RPMS/${{ matrix.rpm_arch }}/*.rpm "release-${{ matrix.arch }}/"
+          cp dist/*_${{ matrix.deb_arch }}.deb "release-${{ matrix.arch }}/"
+          cp dist/*-${{ matrix.arch }}.tar.gz "release-${{ matrix.arch }}/"
           ls -lh release-${{ matrix.arch }}/
 
       - name: Upload artifacts
