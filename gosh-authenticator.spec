@@ -25,6 +25,12 @@ Requires:       gtk3
 # Disable RPATH checks for Flutter-built libraries
 %global __brp_check_rpaths %{nil}
 
+# Flutter's Linux build output directory differs by target architecture.
+%global flutter_arch x64
+%ifarch aarch64
+%global flutter_arch arm64
+%endif
+
 %description
 Gosh Yubico Authenticator is a Linux desktop application for managing OATH
 (TOTP/HOTP) credentials on YubiKey devices. It features a modern Flutter UI
@@ -62,7 +68,7 @@ mkdir -p %{buildroot}%{_datadir}/applications
 mkdir -p %{buildroot}%{_datadir}/icons/hicolor/scalable/apps
 
 # Install the Flutter application
-cp -r flutter_app/build/linux/x64/release/bundle/* %{buildroot}%{_libdir}/%{name}/
+cp -r flutter_app/build/linux/%{flutter_arch}/release/bundle/* %{buildroot}%{_libdir}/%{name}/
 
 # Create wrapper script
 cat > %{buildroot}%{_bindir}/gosh-authenticator << 'EOF'
