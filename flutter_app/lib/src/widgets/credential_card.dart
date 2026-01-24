@@ -7,7 +7,6 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../ffi/gosh_event.dart';
 import '../providers/providers.dart';
 import '../services/icon_preferences_service.dart';
-import '../theme/colors.dart';
 import '../utils/service_icons.dart';
 import 'circular_countdown.dart';
 import 'icon_picker_dialog.dart';
@@ -43,19 +42,24 @@ class _CredentialCardState extends ConsumerState<CredentialCard> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final needsTouch = widget.credential.touchRequired && widget.credential.code == null;
+    final colorScheme = Theme.of(context).colorScheme;
+    final needsTouch =
+        widget.credential.touchRequired && widget.credential.code == null;
 
     return Card(
       clipBehavior: Clip.antiAlias,
       shape: needsTouch
           ? RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: AppColors.warning.withValues(alpha: 0.5), width: 2),
+              side: BorderSide(
+                  color: colorScheme.tertiary.withValues(alpha: 0.55),
+                  width: 2),
             )
           : null, // Fallback to theme default
       child: InkWell(
         onTap: () => _copyCode(context),
         onLongPress: () => _showIconPicker(context),
+        onSecondaryTapDown: (details) => _showContextMenu(context, details),
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Row(
@@ -82,7 +86,7 @@ class _CredentialCardState extends ConsumerState<CredentialCard> {
                       Text(
                         widget.credential.account,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.textSecondary,
+                              color: colorScheme.onSurfaceVariant,
                             ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -108,7 +112,7 @@ class _CredentialCardState extends ConsumerState<CredentialCard> {
                     Text(
                       'COPIED',
                       style: TextStyle(
-                        color: AppColors.primary,
+                        color: colorScheme.primary,
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,
@@ -126,13 +130,13 @@ class _CredentialCardState extends ConsumerState<CredentialCard> {
   }
 
   Widget _buildIcon(bool isDark) {
+    final colorScheme = Theme.of(context).colorScheme;
     final boxDecoration = BoxDecoration(
-      color: isDark ? Colors.white : AppColors.surfaceLight,
+      color: colorScheme.surface,
       borderRadius: BorderRadius.circular(10),
       border: Border.all(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.1)
-            : Colors.grey.shade200,
+        color:
+            isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.shade200,
       ),
       boxShadow: [
         BoxShadow(
@@ -234,7 +238,7 @@ class _CredentialCardState extends ConsumerState<CredentialCard> {
             height: 20,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: AppColors.primary,
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
         ),
@@ -243,7 +247,8 @@ class _CredentialCardState extends ConsumerState<CredentialCard> {
     );
   }
 
-  Widget _buildFaviconContainer(Uint8List imageData, BoxDecoration boxDecoration) {
+  Widget _buildFaviconContainer(
+      Uint8List imageData, BoxDecoration boxDecoration) {
     return Container(
       width: 48,
       height: 48,
@@ -273,8 +278,9 @@ class _CredentialCardState extends ConsumerState<CredentialCard> {
   }
 
   Widget _buildLetterAvatarContent() {
-    final letter =
-        (widget.credential.issuer ?? widget.credential.account).substring(0, 1).toUpperCase();
+    final letter = (widget.credential.issuer ?? widget.credential.account)
+        .substring(0, 1)
+        .toUpperCase();
 
     return Center(
       child: Text(
@@ -282,7 +288,7 @@ class _CredentialCardState extends ConsumerState<CredentialCard> {
         style: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.bold,
-          color: AppColors.primary,
+          color: Theme.of(context).colorScheme.primary,
         ),
       ),
     );
@@ -295,13 +301,13 @@ class _CredentialCardState extends ConsumerState<CredentialCard> {
         Icon(
           Symbols.touch_app,
           size: 12,
-          color: AppColors.warning,
+          color: Theme.of(context).colorScheme.tertiary,
         ),
         const SizedBox(width: 4),
         Text(
           'TOUCH REQUIRED',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppColors.warning,
+                color: Theme.of(context).colorScheme.tertiary,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 0.5,
                 fontSize: 10,
@@ -327,7 +333,9 @@ class _CredentialCardState extends ConsumerState<CredentialCard> {
         fontSize: 22,
         fontWeight: FontWeight.bold,
         letterSpacing: 2,
-        color: isExpiring ? AppColors.warning : AppColors.primary,
+        color: isExpiring
+            ? Theme.of(context).colorScheme.tertiary
+            : Theme.of(context).colorScheme.primary,
       ),
     );
   }
@@ -362,13 +370,14 @@ class _CredentialCardState extends ConsumerState<CredentialCard> {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: AppColors.warning.withValues(alpha: 0.15),
+            color:
+                Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.18),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Icon(
             Symbols.touch_app,
             size: 18,
-            color: AppColors.warning,
+            color: Theme.of(context).colorScheme.tertiary,
           ),
         ),
       );
@@ -379,20 +388,24 @@ class _CredentialCardState extends ConsumerState<CredentialCard> {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         decoration: BoxDecoration(
-          color: AppColors.textSecondary.withValues(alpha: 0.1),
+          color: Theme.of(context)
+              .colorScheme
+              .onSurfaceVariant
+              .withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(4),
         ),
         child: Text(
           'HOTP',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w500,
               ),
         ),
       );
     }
 
-    return CircularCountdown(progress: widget.progress, size: 28, strokeWidth: 3);
+    return CircularCountdown(
+        progress: widget.progress, size: 28, strokeWidth: 3);
   }
 
   String _formatCode(String code) {
@@ -431,7 +444,8 @@ class _CredentialCardState extends ConsumerState<CredentialCard> {
 
   Future<void> _showIconPicker(BuildContext context) async {
     final currentPreference = ref.read(iconPreferenceProvider(_credentialId));
-    final credentialName = widget.credential.issuer ?? widget.credential.account;
+    final credentialName =
+        widget.credential.issuer ?? widget.credential.account;
 
     final result = await showIconPickerDialog(
       context,
@@ -442,6 +456,64 @@ class _CredentialCardState extends ConsumerState<CredentialCard> {
     if (result != null) {
       final notifier = ref.read(iconPreferencesProvider.notifier);
       await notifier.setPreference(_credentialId, result);
+    }
+  }
+
+  Future<void> _showContextMenu(
+    BuildContext context,
+    TapDownDetails details,
+  ) async {
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final position = RelativeRect.fromRect(
+      Rect.fromPoints(details.globalPosition, details.globalPosition),
+      Offset.zero & overlay.size,
+    );
+
+    final hasCode = widget.credential.code != null;
+    final needsCalculate = widget.credential.touchRequired && !hasCode;
+
+    final selected = await showMenu<String>(
+      context: context,
+      position: position,
+      items: [
+        PopupMenuItem<String>(
+          value: 'copy',
+          enabled: hasCode,
+          child: const Text('Copy code'),
+        ),
+        PopupMenuItem<String>(
+          value: 'calculate',
+          enabled: needsCalculate && widget.onCalculate != null,
+          child: const Text('Calculate'),
+        ),
+        const PopupMenuDivider(),
+        const PopupMenuItem<String>(
+          value: 'icon',
+          child: Text('Choose icon...'),
+        ),
+        PopupMenuItem<String>(
+          value: 'delete',
+          enabled: widget.onDelete != null,
+          child: const Text('Delete'),
+        ),
+      ],
+    );
+
+    if (!context.mounted || selected == null) return;
+
+    switch (selected) {
+      case 'copy':
+        _copyCode(context);
+        break;
+      case 'calculate':
+        widget.onCalculate?.call();
+        break;
+      case 'icon':
+        await _showIconPicker(context);
+        break;
+      case 'delete':
+        widget.onDelete?.call();
+        break;
     }
   }
 }

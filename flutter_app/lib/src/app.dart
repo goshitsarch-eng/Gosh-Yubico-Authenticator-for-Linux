@@ -1,9 +1,13 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:yaru/yaru.dart';
 
 import 'providers/providers.dart';
 import 'screens/screens.dart';
-import 'theme/theme.dart';
 import 'widgets/widgets.dart';
 
 /// Main application widget.
@@ -16,12 +20,54 @@ class GoshAuthenticatorApp extends ConsumerWidget {
     final isAuthRequired = ref.watch(isAuthRequiredProvider);
     final isTouchRequired = ref.watch(isTouchRequiredProvider);
 
+    final isLinux = !kIsWeb && Platform.isLinux;
+
+    if (isLinux) {
+      return YaruTheme(
+        builder: (context, yaru, child) => _buildApp(
+          ref,
+          themeMode: themeMode,
+          isAuthRequired: isAuthRequired,
+          isTouchRequired: isTouchRequired,
+          theme: yaru.theme,
+          darkTheme: yaru.darkTheme,
+        ),
+      );
+    }
+
+    return _buildApp(
+      ref,
+      themeMode: themeMode,
+      isAuthRequired: isAuthRequired,
+      isTouchRequired: isTouchRequired,
+      theme: ThemeData.light(useMaterial3: true),
+      darkTheme: ThemeData.dark(useMaterial3: true),
+    );
+  }
+
+  Widget _buildApp(
+    WidgetRef ref, {
+    required ThemeMode themeMode,
+    required bool isAuthRequired,
+    required bool isTouchRequired,
+    required ThemeData theme,
+    required ThemeData darkTheme,
+  }) {
     return MaterialApp(
       title: 'Gosh Yubikey Manager',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
+      theme: theme,
+      darkTheme: darkTheme,
       themeMode: themeMode,
+      scrollBehavior: const MaterialScrollBehavior().copyWith(
+        dragDevices: {
+          PointerDeviceKind.mouse,
+          PointerDeviceKind.touch,
+          PointerDeviceKind.stylus,
+          PointerDeviceKind.unknown,
+          PointerDeviceKind.trackpad,
+        },
+      ),
       home: Stack(
         children: [
           // Main navigator

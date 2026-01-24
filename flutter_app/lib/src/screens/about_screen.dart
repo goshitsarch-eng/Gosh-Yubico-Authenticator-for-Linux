@@ -1,8 +1,10 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-import '../theme/colors.dart';
+import 'package:yaru/yaru.dart';
 
 /// About screen showing app information.
 class AboutScreen extends StatelessWidget {
@@ -10,16 +12,28 @@ class AboutScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isLinux = !kIsWeb && Platform.isLinux;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Opacity(opacity: 0, child: Text('About')),
-      ),
+      appBar: isLinux
+          ? YaruWindowTitleBar(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              title: const Text('About'),
+              centerTitle: true,
+            )
+          : AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              title: const Opacity(opacity: 0, child: Text('About')),
+            ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -27,7 +41,7 @@ class AboutScreen extends StatelessWidget {
             const SizedBox(height: 32),
 
             // Logo with glow
-            _buildLogo(isDark),
+            _buildLogo(context, isDark),
             const SizedBox(height: 24),
 
             // App name and version
@@ -41,7 +55,7 @@ class AboutScreen extends StatelessWidget {
             Text(
               'Version 1.0.0',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colorScheme.onSurfaceVariant,
                   ),
             ),
             const SizedBox(height: 4),
@@ -65,7 +79,8 @@ class AboutScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLogo(bool isDark) {
+  Widget _buildLogo(BuildContext context, bool isDark) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -77,7 +92,7 @@ class AboutScreen extends StatelessWidget {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: AppColors.primaryGlow.withValues(alpha: 0.4),
+                color: colorScheme.primary.withValues(alpha: 0.25),
                 blurRadius: 50,
                 spreadRadius: 15,
               ),
@@ -89,7 +104,7 @@ class AboutScreen extends StatelessWidget {
           width: 96,
           height: 96,
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+            color: colorScheme.surface,
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
@@ -108,7 +123,7 @@ class AboutScreen extends StatelessWidget {
           child: Icon(
             Symbols.security_key,
             size: 48,
-            color: AppColors.primaryGlow,
+            color: colorScheme.primary,
           ),
         ),
       ],
@@ -116,9 +131,10 @@ class AboutScreen extends StatelessWidget {
   }
 
   Widget _buildActionList(BuildContext context, bool isDark) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isDark
@@ -186,6 +202,7 @@ class AboutScreen extends StatelessWidget {
     required String title,
     required VoidCallback onTap,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -198,13 +215,14 @@ class AboutScreen extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: AppColors.primaryGlow.withValues(alpha: isDark ? 0.15 : 0.1),
+                  color: colorScheme.primary
+                      .withValues(alpha: isDark ? 0.12 : 0.08),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   icon,
                   size: 20,
-                  color: AppColors.primaryGlow,
+                  color: colorScheme.primary,
                 ),
               ),
               const SizedBox(width: 14),
@@ -229,6 +247,7 @@ class AboutScreen extends StatelessWidget {
   }
 
   Widget _buildFooter(BuildContext context, bool isDark) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Column(
       children: [
         // Gradient divider
@@ -239,7 +258,7 @@ class AboutScreen extends StatelessWidget {
             gradient: LinearGradient(
               colors: [
                 Colors.transparent,
-                AppColors.primaryGlow.withValues(alpha: 0.3),
+                colorScheme.primary.withValues(alpha: 0.25),
                 Colors.transparent,
               ],
             ),
@@ -259,13 +278,13 @@ class AboutScreen extends StatelessWidget {
                 Icon(
                   Symbols.bug_report,
                   size: 18,
-                  color: AppColors.primaryGlow,
+                  color: colorScheme.primary,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   'Report an Issue',
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: AppColors.textSecondary,
+                        color: colorScheme.onSurfaceVariant,
                       ),
                 ),
               ],

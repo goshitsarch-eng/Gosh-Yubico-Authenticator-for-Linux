@@ -98,7 +98,7 @@ class QrScanner {
       final result = reader.decode(bitmap);
 
       final text = result.text;
-      if (text == null || text.isEmpty) {
+      if (text.isEmpty) {
         throw QrScanException('QR code is empty');
       }
 
@@ -121,8 +121,7 @@ class QrScanner {
     }
 
     if (parsed.scheme != 'otpauth') {
-      throw QrScanException(
-          'Not an otpauth URI (got ${parsed.scheme}://)');
+      throw QrScanException('Not an otpauth URI (got ${parsed.scheme}://)');
     }
 
     // Parse type (totp or hotp)

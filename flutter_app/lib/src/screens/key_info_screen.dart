@@ -4,8 +4,8 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../providers/connection_provider.dart' as conn;
 import '../providers/credentials_provider.dart';
-import '../providers/providers.dart' show connectionProvider, credentialsProvider;
-import '../theme/colors.dart';
+import '../providers/providers.dart'
+    show connectionProvider, credentialsProvider;
 
 /// Screen displaying YubiKey device information.
 class KeyInfoScreen extends ConsumerWidget {
@@ -18,54 +18,52 @@ class KeyInfoScreen extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isConnected = connection.status == conn.ConnectionState.connected;
 
-    return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          // Header
-          SliverToBoxAdapter(
-            child: _buildHeader(context, connection, isDark),
-          ),
+    return CustomScrollView(
+      slivers: [
+        // Header
+        SliverToBoxAdapter(
+          child: _buildHeader(context, connection, isDark),
+        ),
 
-          // Content
-          if (!isConnected)
-            _buildNoDevice(context)
-          else
-            SliverPadding(
-              padding: const EdgeInsets.all(16),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  // Device info card
-                  _buildDeviceCard(context, connection, isDark),
-                  const SizedBox(height: 16),
+        // Content
+        if (!isConnected)
+          _buildNoDevice(context)
+        else
+          SliverPadding(
+            padding: const EdgeInsets.all(16),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                // Device info card
+                _buildDeviceCard(context, connection, isDark),
+                const SizedBox(height: 16),
 
-                  // Credentials stats card
-                  _buildStatsCard(context, credentials, isDark),
-                  const SizedBox(height: 16),
+                // Credentials stats card
+                _buildStatsCard(context, credentials, isDark),
+                const SizedBox(height: 16),
 
-                  // Connection status card
-                  _buildConnectionCard(context, connection, isDark),
-                ]),
-              ),
+                // Connection status card
+                _buildConnectionCard(context, connection, isDark),
+              ]),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 
-  Widget _buildHeader(
-      BuildContext context, conn.ConnectionNotifierState connection, bool isDark) {
+  Widget _buildHeader(BuildContext context,
+      conn.ConnectionNotifierState connection, bool isDark) {
+    final colorScheme = Theme.of(context).colorScheme;
     final isConnected = connection.status == conn.ConnectionState.connected;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
       decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.backgroundDark.withValues(alpha: 0.95)
-            : AppColors.backgroundLight.withValues(alpha: 0.95),
+        color: colorScheme.surface.withValues(alpha: 0.95),
         border: Border(
           bottom: BorderSide(
-            color:
-                isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade200,
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.05)
+                : Colors.grey.shade200,
           ),
         ),
       ),
@@ -76,13 +74,15 @@ class KeyInfoScreen extends ConsumerWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: isDark ? 0.2 : 0.1),
+              color: colorScheme.primary.withValues(alpha: isDark ? 0.2 : 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               Symbols.security_key,
               size: 28,
-              color: isConnected ? AppColors.primary : AppColors.textSecondary,
+              color: isConnected
+                  ? colorScheme.primary
+                  : colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(width: 12),
@@ -103,7 +103,7 @@ class KeyInfoScreen extends ConsumerWidget {
                       ? connection.yubiKeyInfo?.deviceName ?? 'YubiKey'
                       : 'No device connected',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
+                        color: colorScheme.onSurfaceVariant,
                       ),
                 ),
               ],
@@ -115,6 +115,7 @@ class KeyInfoScreen extends ConsumerWidget {
   }
 
   Widget _buildNoDevice(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return SliverFillRemaining(
       hasScrollBody: false,
       child: Center(
@@ -124,7 +125,7 @@ class KeyInfoScreen extends ConsumerWidget {
             Icon(
               Symbols.usb_off,
               size: 64,
-              color: AppColors.textSecondary,
+              color: colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 16),
             Text(
@@ -135,7 +136,7 @@ class KeyInfoScreen extends ConsumerWidget {
             Text(
               'Insert your YubiKey to view device info',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colorScheme.onSurfaceVariant,
                   ),
             ),
           ],
@@ -144,8 +145,9 @@ class KeyInfoScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDeviceCard(
-      BuildContext context, conn.ConnectionNotifierState connection, bool isDark) {
+  Widget _buildDeviceCard(BuildContext context,
+      conn.ConnectionNotifierState connection, bool isDark) {
+    final colorScheme = Theme.of(context).colorScheme;
     final info = connection.yubiKeyInfo;
     final version = info?.version;
 
@@ -159,14 +161,14 @@ class KeyInfoScreen extends ConsumerWidget {
               children: [
                 Icon(
                   Symbols.info,
-                  color: AppColors.primary,
+                  color: colorScheme.primary,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   'DEVICE INFORMATION',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColors.primary,
+                        color: colorScheme.primary,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1,
                       ),
@@ -177,8 +179,13 @@ class KeyInfoScreen extends ConsumerWidget {
             _buildInfoRow(
                 context, 'Device Name', info?.deviceName ?? 'Unknown', isDark),
             const Divider(height: 24),
-            _buildInfoRow(context, 'Firmware Version',
-                version != null ? '${version.major}.${version.minor}.${version.patch}' : 'Unknown', isDark),
+            _buildInfoRow(
+                context,
+                'Firmware Version',
+                version != null
+                    ? '${version.major}.${version.minor}.${version.patch}'
+                    : 'Unknown',
+                isDark),
           ],
         ),
       ),
@@ -187,6 +194,7 @@ class KeyInfoScreen extends ConsumerWidget {
 
   Widget _buildStatsCard(
       BuildContext context, CredentialsState credentials, bool isDark) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -197,14 +205,14 @@ class KeyInfoScreen extends ConsumerWidget {
               children: [
                 Icon(
                   Symbols.key,
-                  color: AppColors.primary,
+                  color: colorScheme.primary,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   'OATH CREDENTIALS',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColors.primary,
+                        color: colorScheme.primary,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1,
                       ),
@@ -259,17 +267,17 @@ class KeyInfoScreen extends ConsumerWidget {
 
   Widget _buildStatItem(BuildContext context, String label, String value,
       IconData icon, bool isDark) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : AppColors.backgroundLight,
+        color:
+            isDark ? Colors.white.withValues(alpha: 0.05) : colorScheme.surface,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
         children: [
-          Icon(icon, color: AppColors.primary, size: 24),
+          Icon(icon, color: colorScheme.primary, size: 24),
           const SizedBox(height: 8),
           Text(
             value,
@@ -281,7 +289,7 @@ class KeyInfoScreen extends ConsumerWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
+                  color: colorScheme.onSurfaceVariant,
                 ),
           ),
         ],
@@ -289,8 +297,9 @@ class KeyInfoScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildConnectionCard(
-      BuildContext context, conn.ConnectionNotifierState connection, bool isDark) {
+  Widget _buildConnectionCard(BuildContext context,
+      conn.ConnectionNotifierState connection, bool isDark) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -301,14 +310,14 @@ class KeyInfoScreen extends ConsumerWidget {
               children: [
                 Icon(
                   Symbols.cable,
-                  color: AppColors.primary,
+                  color: colorScheme.primary,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   'CONNECTION STATUS',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColors.primary,
+                        color: colorScheme.primary,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1,
                       ),
@@ -322,11 +331,11 @@ class KeyInfoScreen extends ConsumerWidget {
                   width: 12,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: AppColors.success,
+                    color: colorScheme.primary,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.success.withValues(alpha: 0.5),
+                        color: colorScheme.primary.withValues(alpha: 0.5),
                         blurRadius: 8,
                       ),
                     ],
@@ -349,13 +358,14 @@ class KeyInfoScreen extends ConsumerWidget {
 
   Widget _buildInfoRow(
       BuildContext context, String label, String value, bool isDark) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondary,
+                color: colorScheme.onSurfaceVariant,
               ),
         ),
         Text(

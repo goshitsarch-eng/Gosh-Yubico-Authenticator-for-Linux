@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../models/icon_preference.dart';
-import '../theme/colors.dart';
 import '../utils/service_icons.dart';
 
 /// Dialog for selecting a custom icon for a credential.
@@ -53,7 +52,9 @@ class _IconPickerDialogState extends ConsumerState<IconPickerDialog>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return AlertDialog(
       title: Text(
@@ -68,7 +69,7 @@ class _IconPickerDialogState extends ConsumerState<IconPickerDialog>
             Text(
               'for ${widget.credentialName}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colorScheme.onSurfaceVariant,
                   ),
             ),
             const SizedBox(height: 16),
@@ -78,9 +79,9 @@ class _IconPickerDialogState extends ConsumerState<IconPickerDialog>
                 Tab(text: 'Service Icons'),
                 Tab(text: 'Custom URL'),
               ],
-              labelColor: AppColors.primary,
-              unselectedLabelColor: AppColors.textSecondary,
-              indicatorColor: AppColors.primary,
+              labelColor: colorScheme.primary,
+              unselectedLabelColor: colorScheme.onSurfaceVariant,
+              indicatorColor: colorScheme.primary,
             ),
             const SizedBox(height: 16),
             Expanded(
@@ -107,7 +108,7 @@ class _IconPickerDialogState extends ConsumerState<IconPickerDialog>
           },
           child: Text(
             'Reset to Auto',
-            style: TextStyle(color: AppColors.textSecondary),
+            style: TextStyle(color: colorScheme.onSurfaceVariant),
           ),
         ),
         FilledButton(
@@ -119,6 +120,7 @@ class _IconPickerDialogState extends ConsumerState<IconPickerDialog>
   }
 
   Widget _buildServiceIconsGrid(bool isDark) {
+    final colorScheme = Theme.of(context).colorScheme;
     final iconKeys = getServiceIconKeys();
 
     return GridView.builder(
@@ -147,17 +149,17 @@ class _IconPickerDialogState extends ConsumerState<IconPickerDialog>
             child: Container(
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppColors.primary.withValues(alpha: 0.15)
+                    ? colorScheme.primary.withValues(alpha: 0.15)
                     : isDark
-                        ? Colors.white.withValues(alpha: 0.05)
-                        : Colors.grey.shade100,
+                        ? colorScheme.surfaceContainerHighest
+                        : colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: isSelected
-                      ? AppColors.primary
+                      ? colorScheme.primary
                       : isDark
-                          ? Colors.white.withValues(alpha: 0.1)
-                          : Colors.grey.shade300,
+                          ? colorScheme.outline.withValues(alpha: 0.4)
+                          : colorScheme.outline.withValues(alpha: 0.4),
                   width: isSelected ? 2 : 1,
                 ),
               ),
@@ -171,7 +173,7 @@ class _IconPickerDialogState extends ConsumerState<IconPickerDialog>
                     : Text(
                         key[0].toUpperCase(),
                         style: TextStyle(
-                          color: AppColors.primary,
+                          color: colorScheme.primary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -184,6 +186,7 @@ class _IconPickerDialogState extends ConsumerState<IconPickerDialog>
   }
 
   Widget _buildCustomUrlInput(bool isDark) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -216,7 +219,7 @@ class _IconPickerDialogState extends ConsumerState<IconPickerDialog>
           Text(
             'Preview:',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
+                  color: colorScheme.onSurfaceVariant,
                 ),
           ),
           const SizedBox(height: 8),
@@ -224,12 +227,10 @@ class _IconPickerDialogState extends ConsumerState<IconPickerDialog>
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: isDark ? Colors.white : AppColors.surfaceLight,
+              color: colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.1)
-                    : Colors.grey.shade200,
+                color: colorScheme.outline.withValues(alpha: 0.25),
               ),
             ),
             child: ClipRRect(
@@ -243,7 +244,7 @@ class _IconPickerDialogState extends ConsumerState<IconPickerDialog>
                   return Center(
                     child: Icon(
                       Symbols.broken_image,
-                      color: AppColors.textSecondary,
+                      color: colorScheme.onSurfaceVariant,
                     ),
                   );
                 },
@@ -252,7 +253,7 @@ class _IconPickerDialogState extends ConsumerState<IconPickerDialog>
                   return Center(
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: AppColors.primary,
+                      color: colorScheme.primary,
                     ),
                   );
                 },

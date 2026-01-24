@@ -21,6 +21,7 @@ dependencies:
   google_fonts: ^6.1.0
   material_symbols_icons: ^4.2719.3
   simple_icons: ^10.1.3
+  yaru: ^9.0.1
 
   # Persistence
   shared_preferences: ^2.2.0

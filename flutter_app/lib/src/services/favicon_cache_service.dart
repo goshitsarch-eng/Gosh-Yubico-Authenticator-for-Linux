@@ -96,5 +96,6 @@ class FaviconCacheService {
   }
 
   String _getKey(String domain) => '$_keyPrefix$domain';
-  String _getTimestampKey(String domain) => '$_keyPrefix${domain}$_timestampSuffix';
+  String _getTimestampKey(String domain) =>
+      '$_keyPrefix$domain$_timestampSuffix';
 }

@@ -1,13 +1,15 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:yaru/yaru.dart';
 
 import '../ffi/gosh_event.dart';
 import '../providers/connection_provider.dart' as conn;
 import '../providers/providers.dart';
-import '../theme/colors.dart';
 import '../widgets/credential_card.dart';
 import 'key_info_screen.dart';
 import 'settings_screen.dart';
@@ -24,6 +26,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Timer? _timer;
   String _searchQuery = '';
   int _currentIndex = 0;
+
+  static const double _desktopNavBreakpoint = 760;
 
   @override
   void initState() {
@@ -42,123 +46,112 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isLinux = !kIsWeb && Platform.isLinux;
     final connectionState = ref.watch(connectionProvider);
-    final isConnected = connectionState.status == conn.ConnectionState.connected;
+    final isConnected =
+        connectionState.status == conn.ConnectionState.connected;
+
+    final titles = ['Credentials', 'Key Info', 'Settings'];
 
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: [
-          _buildCredentialsTab(),
-          const KeyInfoScreen(),
-          const SettingsScreen(),
-        ],
+      appBar: isLinux
+          ? YaruWindowTitleBar(
+              title: Text(titles[_currentIndex]),
+              centerTitle: true,
+              actions: _currentIndex == 0 && isConnected
+                  ? [
+                      IconButton(
+                        tooltip: 'Add Account',
+                        icon: const Icon(Symbols.add),
+                        onPressed: () =>
+                            Navigator.of(context).pushNamed('/add'),
+                      ),
+                      const SizedBox(width: 8),
+                    ]
+                  : null,
+            )
+          : AppBar(
+              automaticallyImplyLeading: false,
+              title: Text(titles[_currentIndex]),
+            ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final useRail = constraints.maxWidth >= _desktopNavBreakpoint;
+
+          final content = IndexedStack(
+            index: _currentIndex,
+            children: [
+              _buildCredentialsTab(),
+              const KeyInfoScreen(),
+              const SettingsScreen(),
+            ],
+          );
+
+          if (!useRail) return content;
+
+          return Row(
+            children: [
+              NavigationRail(
+                selectedIndex: _currentIndex,
+                onDestinationSelected: (index) =>
+                    setState(() => _currentIndex = index),
+                labelType: NavigationRailLabelType.all,
+                leading: const SizedBox(height: 8),
+                useIndicator: true,
+                destinations: const [
+                  NavigationRailDestination(
+                    icon: Icon(Symbols.key),
+                    label: Text('Credentials'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Symbols.info),
+                    label: Text('Key Info'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Symbols.settings),
+                    label: Text('Settings'),
+                  ),
+                ],
+              ),
+              const VerticalDivider(width: 1),
+              Expanded(child: content),
+            ],
+          );
+        },
       ),
-      floatingActionButton: _currentIndex == 0 && isConnected
+      floatingActionButton: !isLinux && _currentIndex == 0 && isConnected
           ? FloatingActionButton.extended(
               onPressed: () => Navigator.of(context).pushNamed('/add'),
               icon: const Icon(Symbols.add),
               label: const Text('Add Account'),
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
             )
           : null,
-      bottomNavigationBar: _buildBottomNav(context),
-    );
-  }
+      bottomNavigationBar: LayoutBuilder(
+        builder: (context, constraints) {
+          final useRail = constraints.maxWidth >= _desktopNavBreakpoint;
+          if (useRail) return const SizedBox.shrink();
 
-  Widget _buildBottomNav(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-        border: Border(
-          top: BorderSide(
-            color:
-                isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade200,
-          ),
-        ),
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              Expanded(
-                child: _buildNavItem(
-                  context,
-                  index: 0,
-                  icon: Symbols.key,
-                  label: 'Credentials',
-                  isDark: isDark,
-                ),
+          return NavigationBar(
+            selectedIndex: _currentIndex,
+            onDestinationSelected: (index) =>
+                setState(() => _currentIndex = index),
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Symbols.key),
+                label: 'Credentials',
               ),
-              Expanded(
-                child: _buildNavItem(
-                  context,
-                  index: 1,
-                  icon: Symbols.info,
-                  label: 'Key Info',
-                  isDark: isDark,
-                ),
+              NavigationDestination(
+                icon: Icon(Symbols.info),
+                label: 'Key Info',
               ),
-              Expanded(
-                child: _buildNavItem(
-                  context,
-                  index: 2,
-                  icon: Symbols.settings,
-                  label: 'Settings',
-                  isDark: isDark,
-                ),
+              NavigationDestination(
+                icon: Icon(Symbols.settings),
+                label: 'Settings',
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-    BuildContext context, {
-    required int index,
-    required IconData icon,
-    required String label,
-    required bool isDark,
-  }) {
-    final isSelected = _currentIndex == index;
-
-    return GestureDetector(
-      onTap: () => setState(() => _currentIndex = index),
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withValues(alpha: isDark ? 0.2 : 0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 24,
-              color: isSelected ? AppColors.primary : AppColors.textSecondary,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color:
-                        isSelected ? AppColors.primary : AppColors.textSecondary,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -192,16 +185,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildHeader(
-      BuildContext context, conn.ConnectionNotifierState connection, bool isDark) {
+  Widget _buildHeader(BuildContext context,
+      conn.ConnectionNotifierState connection, bool isDark) {
+    final colorScheme = Theme.of(context).colorScheme;
     final isConnected = connection.status == conn.ConnectionState.connected;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 48, 20, 20),
       decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.backgroundDark.withValues(alpha: 0.95)
-            : AppColors.backgroundLight.withValues(alpha: 0.95),
+        color: colorScheme.surface.withValues(alpha: 0.95),
       ),
       child: Column(
         children: [
@@ -211,7 +203,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Icon(
                 isConnected ? Symbols.usb : Symbols.usb_off,
                 size: 20,
-                color: isConnected ? AppColors.success : AppColors.textSecondary,
+                color: isConnected
+                    ? colorScheme.primary
+                    : colorScheme.onSurfaceVariant,
               ),
               const SizedBox(width: 8),
               Text(
@@ -226,11 +220,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: AppColors.success,
+                    color: colorScheme.primary,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.success.withValues(alpha: 0.5),
+                        color: colorScheme.primary.withValues(alpha: 0.35),
                         blurRadius: 4,
                       ),
                     ],
@@ -245,7 +239,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: Text(
                 'Connected',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppColors.success,
+                      color: colorScheme.primary,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.5,
                     ),
@@ -257,11 +251,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildSearchBar(BuildContext context, bool isDark) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Container(
         decoration: BoxDecoration(
-          color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+          color: colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isDark
@@ -273,10 +268,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           onChanged: (value) => setState(() => _searchQuery = value),
           decoration: InputDecoration(
             hintText: 'Search accounts...',
-            hintStyle: TextStyle(color: AppColors.textSecondary),
+            hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
             prefixIcon: Icon(
               Symbols.search,
-              color: AppColors.textSecondary,
+              color: colorScheme.onSurfaceVariant,
             ),
             filled: false,
             border: InputBorder.none,
@@ -290,6 +285,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildNoDevice(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return SliverFillRemaining(
       hasScrollBody: false,
       child: Center(
@@ -299,7 +295,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Icon(
               Symbols.usb_off,
               size: 64,
-              color: AppColors.textSecondary,
+              color: colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 16),
             Text(
@@ -310,12 +306,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Text(
               'Insert your YubiKey to view credentials',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colorScheme.onSurfaceVariant,
                   ),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () => ref.read(connectionProvider.notifier).reconnect(),
+              onPressed: () =>
+                  ref.read(connectionProvider.notifier).reconnect(),
               icon: Icon(Symbols.refresh),
               label: const Text('Retry'),
             ),
@@ -326,6 +323,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildNoCredentials(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return SliverFillRemaining(
       hasScrollBody: false,
       child: Center(
@@ -335,7 +333,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Icon(
               Symbols.vpn_key_off,
               size: 64,
-              color: AppColors.textSecondary,
+              color: colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 16),
             Text(
@@ -346,7 +344,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Text(
               'Add your first credential to get started',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colorScheme.onSurfaceVariant,
                   ),
             ),
             const SizedBox(height: 24),
@@ -385,8 +383,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: CredentialCard(
                 credential: credential,
                 progress: progress,
-                onCalculate: () =>
-                    ref.read(credentialsProvider.notifier).calculate(credential.id),
+                onCalculate: () => ref
+                    .read(credentialsProvider.notifier)
+                    .calculate(credential.id),
                 onDelete: () => _confirmDelete(context, credential),
               ),
             );
@@ -407,6 +406,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _confirmDelete(BuildContext context, Credential credential) {
+    final colorScheme = Theme.of(context).colorScheme;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -423,7 +423,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ref.read(credentialsProvider.notifier).delete(credential.id);
               Navigator.of(context).pop();
             },
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            style: TextButton.styleFrom(foregroundColor: colorScheme.error),
             child: const Text('Delete'),
           ),
         ],

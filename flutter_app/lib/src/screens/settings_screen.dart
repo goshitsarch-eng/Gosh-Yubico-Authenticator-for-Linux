@@ -4,7 +4,6 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../providers/connection_provider.dart' as conn;
 import '../providers/providers.dart';
-import '../theme/colors.dart';
 import '../widgets/change_password_dialog.dart';
 
 /// Settings screen.
@@ -15,110 +14,108 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
     final connection = ref.watch(connectionProvider);
+    final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text('Settings'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // General section
-          _buildSectionHeader(context, 'General'),
-          const SizedBox(height: 12),
-          _buildSettingsCard(
-            context,
-            children: [
-              _buildSettingsTile(
-                context,
-                icon: Symbols.palette,
-                title: 'Theme',
-                subtitle: 'App appearance',
-                trailing: Text(
-                  _themeModeLabel(settings.themeMode),
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                ),
-                onTap: () => _showThemeDialog(context, ref, settings.themeMode),
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // General section
+        _buildSectionHeader(context, 'General'),
+        const SizedBox(height: 12),
+        _buildSettingsCard(
+          context,
+          children: [
+            _buildSettingsTile(
+              context,
+              icon: Symbols.palette,
+              title: 'Theme',
+              subtitle: 'App appearance',
+              trailing: Text(
+                _themeModeLabel(settings.themeMode),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
               ),
-            ],
-          ),
-          const SizedBox(height: 24),
+              onTap: () => _showThemeDialog(context, ref, settings.themeMode),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
 
-          // Security section
-          _buildSectionHeader(context, 'Security'),
-          const SizedBox(height: 12),
-          _buildSettingsCard(
-            context,
-            children: [
-              _buildSettingsTile(
-                context,
-                icon: Symbols.key,
-                title: 'Change YubiKey PIN',
-                subtitle: connection.status == conn.ConnectionState.connected
-                    ? null
-                    : 'Connect YubiKey first',
-                onTap: connection.status == conn.ConnectionState.connected
-                    ? () => showChangePasswordDialog(context)
-                    : null,
+        // Security section
+        _buildSectionHeader(context, 'Security'),
+        const SizedBox(height: 12),
+        _buildSettingsCard(
+          context,
+          children: [
+            _buildSettingsTile(
+              context,
+              icon: Symbols.key,
+              title: 'Change YubiKey PIN',
+              subtitle: connection.status == conn.ConnectionState.connected
+                  ? null
+                  : 'Connect YubiKey first',
+              onTap: connection.status == conn.ConnectionState.connected
+                  ? () => showChangePasswordDialog(context)
+                  : null,
+            ),
+            const Divider(height: 1),
+            _buildSettingsTile(
+              context,
+              icon: Symbols.lock,
+              title: 'Require PIN',
+              subtitle: 'On application launch',
+              trailing: Switch(
+                value: settings.requirePinOnLaunch,
+                onChanged: (value) {
+                  ref
+                      .read(settingsProvider.notifier)
+                      .setRequirePinOnLaunch(value);
+                },
               ),
-              const Divider(height: 1),
-              _buildSettingsTile(
-                context,
-                icon: Symbols.lock,
-                title: 'Require PIN',
-                subtitle: 'On application launch',
-                trailing: Switch(
-                  value: settings.requirePinOnLaunch,
-                  onChanged: (value) {
-                    ref.read(settingsProvider.notifier).setRequirePinOnLaunch(value);
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
 
-          // Preferences section
-          _buildSectionHeader(context, 'App Preferences'),
-          const SizedBox(height: 12),
-          _buildSettingsCard(
-            context,
-            children: [
-              _buildSettingsTile(
-                context,
-                icon: Symbols.content_paste_off,
-                title: 'Clear Clipboard',
-                subtitle: 'Sensitive data timeout',
-                trailing: Text(
-                  '${settings.clipboardTimeoutSeconds}s',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                ),
-                onTap: () => _showClipboardDialog(
-                    context, ref, settings.clipboardTimeoutSeconds),
+        // Preferences section
+        _buildSectionHeader(context, 'App Preferences'),
+        const SizedBox(height: 12),
+        _buildSettingsCard(
+          context,
+          children: [
+            _buildSettingsTile(
+              context,
+              icon: Symbols.content_paste_off,
+              title: 'Clear Clipboard',
+              subtitle: 'Sensitive data timeout',
+              trailing: Text(
+                '${settings.clipboardTimeoutSeconds}s',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
               ),
-            ],
-          ),
-          const SizedBox(height: 48),
+              onTap: () => _showClipboardDialog(
+                  context, ref, settings.clipboardTimeoutSeconds),
+            ),
+          ],
+        ),
+        const SizedBox(height: 48),
 
-          // Footer
-          _buildFooter(context, connection),
-        ],
-      ),
+        // Footer
+        _buildFooter(context, connection),
+      ],
     );
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
       child: Text(
         title.toUpperCase(),
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: AppColors.primary,
+              color: colorScheme.primary,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.2,
               fontSize: 13,
@@ -144,18 +141,19 @@ class SettingsScreen extends ConsumerWidget {
     VoidCallback? onTap,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return ListTile(
       leading: Container(
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: isDark ? 0.15 : 0.08),
+          color: colorScheme.primary.withValues(alpha: isDark ? 0.15 : 0.08),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Icon(
           icon,
-          color: AppColors.primary,
+          color: colorScheme.primary,
           size: 24,
         ),
       ),
@@ -169,21 +167,23 @@ class SettingsScreen extends ConsumerWidget {
           ? Text(
               subtitle,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colorScheme.onSurfaceVariant,
                   ),
             )
           : null,
       trailing: trailing ??
           Icon(
             Symbols.chevron_right,
-            color: AppColors.textSecondary,
+            color: colorScheme.onSurfaceVariant,
           ),
       onTap: onTap,
     );
   }
 
-  Widget _buildFooter(BuildContext context, conn.ConnectionNotifierState connection) {
+  Widget _buildFooter(
+      BuildContext context, conn.ConnectionNotifierState connection) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Column(
       children: [
@@ -194,12 +194,12 @@ class SettingsScreen extends ConsumerWidget {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [AppColors.primary, Colors.teal.shade800],
+              colors: [colorScheme.primary, colorScheme.secondary],
             ),
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.3),
+                color: colorScheme.primary.withValues(alpha: 0.3),
                 blurRadius: 15,
               ),
             ],
@@ -214,7 +214,7 @@ class SettingsScreen extends ConsumerWidget {
         Text(
           'Gosh Yubikey Manager',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.textSecondary,
+                color: colorScheme.onSurfaceVariant,
               ),
         ),
         const SizedBox(height: 4),
@@ -231,7 +231,7 @@ class SettingsScreen extends ConsumerWidget {
             decoration: BoxDecoration(
               color: isDark
                   ? Colors.white.withValues(alpha: 0.1)
-                  : AppColors.surfaceDark.withValues(alpha: 0.9),
+                  : colorScheme.primary.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
@@ -241,11 +241,11 @@ class SettingsScreen extends ConsumerWidget {
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: AppColors.success,
+                    color: colorScheme.primary,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.success.withValues(alpha: 0.5),
+                        color: colorScheme.primary.withValues(alpha: 0.5),
                         blurRadius: 8,
                       ),
                     ],
@@ -278,24 +278,26 @@ class SettingsScreen extends ConsumerWidget {
     }
   }
 
-  void _showThemeDialog(BuildContext context, WidgetRef ref, ThemeMode current) {
+  void _showThemeDialog(
+      BuildContext context, WidgetRef ref, ThemeMode current) {
     showDialog(
       context: context,
-      builder: (context) => SimpleDialog(
-        title: const Text('Theme'),
-        children: ThemeMode.values.map((mode) {
-          return RadioListTile<ThemeMode>(
-            value: mode,
-            groupValue: current,
-            title: Text(_themeModeLabel(mode)),
-            onChanged: (value) {
-              if (value != null) {
-                ref.read(settingsProvider.notifier).setThemeMode(value);
-              }
-              Navigator.of(context).pop();
-            },
-          );
-        }).toList(),
+      builder: (dialogContext) => RadioGroup<ThemeMode>(
+        groupValue: current,
+        onChanged: (value) {
+          if (value == null) return;
+          ref.read(settingsProvider.notifier).setThemeMode(value);
+          Navigator.of(dialogContext).pop();
+        },
+        child: SimpleDialog(
+          title: const Text('Theme'),
+          children: ThemeMode.values
+              .map((mode) => RadioListTile<ThemeMode>(
+                    value: mode,
+                    title: Text(_themeModeLabel(mode)),
+                  ))
+              .toList(),
+        ),
       ),
     );
   }
@@ -305,21 +307,22 @@ class SettingsScreen extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (context) => SimpleDialog(
-        title: const Text('Clear Clipboard After'),
-        children: options.map((seconds) {
-          return RadioListTile<int>(
-            value: seconds,
-            groupValue: current,
-            title: Text('$seconds seconds'),
-            onChanged: (value) {
-              if (value != null) {
-                ref.read(settingsProvider.notifier).setClipboardTimeout(value);
-              }
-              Navigator.of(context).pop();
-            },
-          );
-        }).toList(),
+      builder: (dialogContext) => RadioGroup<int>(
+        groupValue: current,
+        onChanged: (value) {
+          if (value == null) return;
+          ref.read(settingsProvider.notifier).setClipboardTimeout(value);
+          Navigator.of(dialogContext).pop();
+        },
+        child: SimpleDialog(
+          title: const Text('Clear Clipboard After'),
+          children: options
+              .map((seconds) => RadioListTile<int>(
+                    value: seconds,
+                    title: Text('$seconds seconds'),
+                  ))
+              .toList(),
+        ),
       ),
     );
   }

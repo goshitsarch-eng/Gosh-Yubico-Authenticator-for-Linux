@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
-import '../theme/colors.dart';
-
 /// Full-screen prompt for YubiKey touch.
 class TouchPrompt extends StatelessWidget {
   final VoidCallback? onCancel;
@@ -11,10 +9,11 @@ class TouchPrompt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Material(
-      color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      color: theme.scaffoldBackgroundColor,
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -33,7 +32,7 @@ class TouchPrompt extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: AppColors.primary.withValues(alpha: 0.1),
+                        color: colorScheme.primary.withValues(alpha: 0.1),
                         width: 1,
                       ),
                     ),
@@ -41,10 +40,10 @@ class TouchPrompt extends StatelessWidget {
                   // Middle ring
                   _PulsingRing(
                     size: 250,
-                    color: AppColors.primary.withValues(alpha: 0.2),
+                    color: colorScheme.primary.withValues(alpha: 0.2),
                   ),
                   // YubiKey illustration
-                  _buildYubiKeyIllustration(isDark),
+                  _buildYubiKeyIllustration(context),
                   // NFC waves icon
                   Positioned(
                     right: 20,
@@ -52,7 +51,7 @@ class TouchPrompt extends StatelessWidget {
                     child: Icon(
                       Symbols.contactless,
                       size: 24,
-                      color: AppColors.textSecondary,
+                      color: colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -71,7 +70,7 @@ class TouchPrompt extends StatelessWidget {
               Text(
                 'Touch the gold contact point on your security key to generate your code.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondary,
+                      color: colorScheme.onSurfaceVariant,
                     ),
                 textAlign: TextAlign.center,
               ),
@@ -90,7 +89,9 @@ class TouchPrompt extends StatelessWidget {
                     borderRadius: BorderRadius.circular(24),
                   ),
                   side: BorderSide(
-                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                    color: theme.brightness == Brightness.dark
+                        ? Colors.grey.shade700
+                        : Colors.grey.shade300,
                   ),
                 ),
                 child: const Text('Cancel Request'),
@@ -103,7 +104,8 @@ class TouchPrompt extends StatelessWidget {
     );
   }
 
-  Widget _buildYubiKeyIllustration(bool isDark) {
+  Widget _buildYubiKeyIllustration(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: 128,
       height: 224,
@@ -118,7 +120,7 @@ class TouchPrompt extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade700),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.2),
+            color: colorScheme.primary.withValues(alpha: 0.2),
             blurRadius: 40,
             spreadRadius: 10,
           ),
@@ -166,14 +168,14 @@ class TouchPrompt extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.3),
+                color: colorScheme.primary.withValues(alpha: 0.3),
                 width: 2,
               ),
             ),
             child: Icon(
               Symbols.security_key,
               size: 16,
-              color: AppColors.primary.withValues(alpha: 0.5),
+              color: colorScheme.primary.withValues(alpha: 0.5),
             ),
           ),
           const SizedBox(height: 24),
@@ -285,6 +287,7 @@ class _GoldSensorState extends State<_GoldSensor>
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
@@ -299,8 +302,8 @@ class _GoldSensorState extends State<_GoldSensor>
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color:
-                        AppColors.primaryGlow.withValues(alpha: _animation.value * 0.4),
+                    color: colorScheme.primary
+                        .withValues(alpha: _animation.value * 0.4),
                     blurRadius: 20,
                     spreadRadius: 5,
                   ),

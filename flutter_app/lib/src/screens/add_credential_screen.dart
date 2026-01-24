@@ -1,10 +1,13 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:yaru/yaru.dart';
 
 import '../ffi/gosh_event.dart';
 import '../providers/providers.dart';
-import '../theme/colors.dart';
 import '../utils/qr_scanner.dart';
 
 /// Screen for adding a new credential.
@@ -39,26 +42,50 @@ class _AddCredentialScreenState extends ConsumerState<AddCredentialScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isLinux = !kIsWeb && Platform.isLinux;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
     final isConnected = ref.watch(isConnectedProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Symbols.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text('Add Credential'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Icon(
-              Symbols.usb,
-              color: isConnected ? AppColors.primary : AppColors.textSecondary,
+      appBar: isLinux
+          ? YaruWindowTitleBar(
+              leading: IconButton(
+                icon: Icon(Symbols.arrow_back),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              title: const Text('Add Credential'),
+              centerTitle: true,
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 16),
+                  child: Icon(
+                    Symbols.usb,
+                    color: isConnected
+                        ? colorScheme.primary
+                        : colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            )
+          : AppBar(
+              leading: IconButton(
+                icon: Icon(Symbols.arrow_back),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              title: const Text('Add Credential'),
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 16),
+                  child: Icon(
+                    Symbols.usb,
+                    color: isConnected
+                        ? colorScheme.primary
+                        : colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -87,10 +114,11 @@ class _AddCredentialScreenState extends ConsumerState<AddCredentialScreen> {
   }
 
   Widget _buildTypeSelector(bool isDark) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : Colors.grey.shade200,
+        color: isDark ? colorScheme.surface : Colors.grey.shade200,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -108,6 +136,7 @@ class _AddCredentialScreenState extends ConsumerState<AddCredentialScreen> {
 
   Widget _buildTypeButton(String label, OathType type, bool isDark) {
     final isSelected = _oathType == type;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return GestureDetector(
       onTap: () => setState(() => _oathType = type),
@@ -135,7 +164,7 @@ class _AddCredentialScreenState extends ConsumerState<AddCredentialScreen> {
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               color: isSelected
                   ? (isDark ? Colors.white : Colors.black)
-                  : AppColors.textSecondary,
+                  : colorScheme.onSurfaceVariant,
             ),
           ),
         ),
@@ -144,6 +173,7 @@ class _AddCredentialScreenState extends ConsumerState<AddCredentialScreen> {
   }
 
   Widget _buildIdentityCard(BuildContext context, bool isDark) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -157,7 +187,8 @@ class _AddCredentialScreenState extends ConsumerState<AddCredentialScreen> {
               controller: _issuerController,
               decoration: InputDecoration(
                 hintText: 'e.g. Google, AWS',
-                prefixIcon: Icon(Symbols.grid_view, color: AppColors.textSecondary),
+                prefixIcon: Icon(Symbols.grid_view,
+                    color: colorScheme.onSurfaceVariant),
               ),
             ),
             const SizedBox(height: 20),
@@ -169,7 +200,8 @@ class _AddCredentialScreenState extends ConsumerState<AddCredentialScreen> {
               controller: _accountController,
               decoration: InputDecoration(
                 hintText: 'user@example.com',
-                prefixIcon: Icon(Symbols.person, color: AppColors.textSecondary),
+                prefixIcon:
+                    Icon(Symbols.person, color: colorScheme.onSurfaceVariant),
               ),
               validator: (value) {
                 if (value == null || value.isEmpty) {
@@ -185,6 +217,7 @@ class _AddCredentialScreenState extends ConsumerState<AddCredentialScreen> {
   }
 
   Widget _buildSecurityCard(BuildContext context, bool isDark) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -201,7 +234,7 @@ class _AddCredentialScreenState extends ConsumerState<AddCredentialScreen> {
                   icon: Icon(Symbols.qr_code_scanner, size: 16),
                   label: const Text('Scan QR'),
                   style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primary,
+                    foregroundColor: colorScheme.primary,
                     textStyle: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -220,11 +253,12 @@ class _AddCredentialScreenState extends ConsumerState<AddCredentialScreen> {
               ),
               decoration: InputDecoration(
                 hintText: 'JBSWY3DPEHPK3PXP',
-                prefixIcon: Icon(Symbols.key, color: AppColors.textSecondary),
+                prefixIcon:
+                    Icon(Symbols.key, color: colorScheme.onSurfaceVariant),
                 suffixIcon: IconButton(
                   icon: Icon(
                     _showSecret ? Symbols.visibility_off : Symbols.visibility,
-                    color: AppColors.textSecondary,
+                    color: colorScheme.onSurfaceVariant,
                   ),
                   onPressed: () => setState(() => _showSecret = !_showSecret),
                 ),
@@ -245,7 +279,7 @@ class _AddCredentialScreenState extends ConsumerState<AddCredentialScreen> {
             Text(
               'Base32 encoded key provided by the service. Spaces are ignored.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colorScheme.onSurfaceVariant,
                   ),
             ),
             const SizedBox(height: 16),
@@ -269,7 +303,7 @@ class _AddCredentialScreenState extends ConsumerState<AddCredentialScreen> {
                     Text(
                       'Physical touch needed to generate code',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondary,
+                            color: colorScheme.onSurfaceVariant,
                           ),
                     ),
                   ],
@@ -287,10 +321,11 @@ class _AddCredentialScreenState extends ConsumerState<AddCredentialScreen> {
   }
 
   Widget _buildLabel(BuildContext context, String text) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Text(
       text.toUpperCase(),
       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: AppColors.textSecondary,
+            color: colorScheme.onSurfaceVariant,
             fontWeight: FontWeight.bold,
             letterSpacing: 1,
           ),
@@ -298,18 +333,19 @@ class _AddCredentialScreenState extends ConsumerState<AddCredentialScreen> {
   }
 
   Widget _buildInfoBanner(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.primaryGlow.withValues(alpha: 0.15),
-            AppColors.primary.withValues(alpha: 0.08),
+            colorScheme.primary.withValues(alpha: 0.12),
+            colorScheme.primary.withValues(alpha: 0.06),
           ],
         ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.25),
+          color: colorScheme.primary.withValues(alpha: 0.25),
         ),
       ),
       child: Row(
@@ -318,7 +354,7 @@ class _AddCredentialScreenState extends ConsumerState<AddCredentialScreen> {
           Icon(
             Symbols.info,
             size: 20,
-            color: AppColors.primary,
+            color: colorScheme.primary,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -335,6 +371,8 @@ class _AddCredentialScreenState extends ConsumerState<AddCredentialScreen> {
   }
 
   Widget _buildSubmitButton(BuildContext context) {
+    final isLinux = !kIsWeb && Platform.isLinux;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -348,23 +386,41 @@ class _AddCredentialScreenState extends ConsumerState<AddCredentialScreen> {
         ),
       ),
       child: SafeArea(
-        child: ElevatedButton.icon(
-          onPressed: _isSubmitting ? null : _submit,
-          icon: _isSubmitting
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : Icon(Symbols.save),
-          label: Text(_isSubmitting ? 'Saving...' : 'Save Credential'),
-          style: ElevatedButton.styleFrom(
-            minimumSize: const Size.fromHeight(56),
-          ),
-        ),
+        child: isLinux
+            ? FilledButton.icon(
+                onPressed: _isSubmitting ? null : _submit,
+                icon: _isSubmitting
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
+                      )
+                    : const Icon(Symbols.save),
+                label: Text(_isSubmitting ? 'Saving...' : 'Save Credential'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(40),
+                ),
+              )
+            : ElevatedButton.icon(
+                onPressed: _isSubmitting ? null : _submit,
+                icon: _isSubmitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Symbols.save),
+                label: Text(_isSubmitting ? 'Saving...' : 'Save Credential'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(56),
+                ),
+              ),
       ),
     );
   }
@@ -390,28 +446,31 @@ class _AddCredentialScreenState extends ConsumerState<AddCredentialScreen> {
       });
 
       if (mounted) {
+        final colorScheme = Theme.of(context).colorScheme;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('QR code scanned successfully'),
-            backgroundColor: AppColors.success,
+          SnackBar(
+            content: const Text('QR code scanned successfully'),
+            backgroundColor: colorScheme.primary,
           ),
         );
       }
     } on QrScanException catch (e) {
       if (mounted) {
+        final colorScheme = Theme.of(context).colorScheme;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.message),
-            backgroundColor: AppColors.error,
+            backgroundColor: colorScheme.error,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
+        final colorScheme = Theme.of(context).colorScheme;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to scan QR code: $e'),
-            backgroundColor: AppColors.error,
+            backgroundColor: colorScheme.error,
           ),
         );
       }
@@ -440,8 +499,9 @@ class _AddCredentialScreenState extends ConsumerState<AddCredentialScreen> {
       Navigator.of(context).pop();
     } else if (mounted) {
       final error = client.takeLastError() ?? 'Failed to add credential';
+      final colorScheme = Theme.of(context).colorScheme;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error), backgroundColor: AppColors.error),
+        SnackBar(content: Text(error), backgroundColor: colorScheme.error),
       );
     }
   }

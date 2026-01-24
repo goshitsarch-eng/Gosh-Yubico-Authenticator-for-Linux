@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/providers.dart';
-import '../theme/colors.dart';
 
 /// PIN entry dialog for YubiKey authentication.
 class PinEntryDialog extends ConsumerStatefulWidget {
@@ -29,7 +28,9 @@ class _PinEntryDialogState extends ConsumerState<PinEntryDialog> {
     final authState = ref.watch(authProvider);
     final connection = ref.watch(connectionProvider);
     final deviceName = connection.yubiKeyInfo?.deviceName ?? 'YubiKey';
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Stack(
       children: [
@@ -47,7 +48,7 @@ class _PinEntryDialogState extends ConsumerState<PinEntryDialog> {
             margin: const EdgeInsets.all(24),
             constraints: const BoxConstraints(maxWidth: 400),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.modalDark : Colors.white,
+              color: colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
@@ -67,7 +68,7 @@ class _PinEntryDialogState extends ConsumerState<PinEntryDialog> {
                     gradient: LinearGradient(
                       colors: [
                         Colors.transparent,
-                        AppColors.primary.withValues(alpha: 0.5),
+                        colorScheme.primary.withValues(alpha: 0.5),
                         Colors.transparent,
                       ],
                     ),
@@ -100,7 +101,7 @@ class _PinEntryDialogState extends ConsumerState<PinEntryDialog> {
                       Text(
                         'Please enter the PIN for your $deviceName to access credentials.',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.textSecondary,
+                              color: colorScheme.onSurfaceVariant,
                             ),
                         textAlign: TextAlign.center,
                       ),
@@ -118,7 +119,7 @@ class _PinEntryDialogState extends ConsumerState<PinEntryDialog> {
                             Icon(
                               Icons.error,
                               size: 14,
-                              color: AppColors.error,
+                              color: colorScheme.error,
                             ),
                             const SizedBox(width: 4),
                             Text(
@@ -127,7 +128,7 @@ class _PinEntryDialogState extends ConsumerState<PinEntryDialog> {
                                   .textTheme
                                   .labelSmall
                                   ?.copyWith(
-                                    color: AppColors.error,
+                                    color: colorScheme.error,
                                     fontWeight: FontWeight.bold,
                                   ),
                             ),
@@ -170,7 +171,7 @@ class _PinEntryDialogState extends ConsumerState<PinEntryDialog> {
                           'Cancel',
                           style:
                               Theme.of(context).textTheme.labelLarge?.copyWith(
-                                    color: AppColors.textSecondary,
+                                    color: colorScheme.onSurfaceVariant,
                                   ),
                         ),
                       ),
@@ -186,6 +187,7 @@ class _PinEntryDialogState extends ConsumerState<PinEntryDialog> {
   }
 
   Widget _buildIcon(bool isDark) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -197,7 +199,7 @@ class _PinEntryDialogState extends ConsumerState<PinEntryDialog> {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.3),
+                color: colorScheme.primary.withValues(alpha: 0.3),
                 blurRadius: 30,
               ),
             ],
@@ -209,28 +211,25 @@ class _PinEntryDialogState extends ConsumerState<PinEntryDialog> {
           height: 64,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isDark ? const Color(0xFF363636) : AppColors.backgroundLight,
+            color: colorScheme.surface,
             border: Border.all(
               color: isDark ? const Color(0xFF444444) : Colors.grey.shade200,
             ),
           ),
-          child: const Icon(
-            Icons.lock,
-            size: 32,
-            color: AppColors.primary,
-          ),
+          child: Icon(Icons.lock, size: 32, color: colorScheme.primary),
         ),
       ],
     );
   }
 
   Widget _buildPinInput(bool isDark) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.1),
+            color: colorScheme.primary.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -263,15 +262,15 @@ class _PinEntryDialogState extends ConsumerState<PinEntryDialog> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(
-              color: AppColors.primary,
+            borderSide: BorderSide(
+              color: colorScheme.primary,
               width: 2,
             ),
           ),
           suffixIcon: IconButton(
             icon: Icon(
               _showPin ? Icons.visibility_off : Icons.visibility,
-              color: AppColors.textSecondary,
+              color: colorScheme.onSurfaceVariant,
             ),
             onPressed: () => setState(() => _showPin = !_showPin),
           ),

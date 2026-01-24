@@ -16,4 +16,4 @@ DynamicLibrary loadNativeLibrary() {
 }
 
 /// Global singleton for FFI bindings.
-late final GoshFfiBindings goshFfi = GoshFfiBindings(loadNativeLibrary());
+final GoshFfiBindings goshFfi = GoshFfiBindings(loadNativeLibrary());

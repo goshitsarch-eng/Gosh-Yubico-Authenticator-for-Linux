@@ -2,8 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../theme/colors.dart';
-
 /// Circular countdown timer widget for TOTP credentials.
 class CircularCountdown extends StatelessWidget {
   final double progress;
@@ -22,10 +20,9 @@ class CircularCountdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final progressColor = color ?? _getProgressColor(progress);
-    final backgroundColor = isDark
-        ? Colors.white.withValues(alpha: 0.1)
-        : Colors.grey.shade200;
+    final progressColor = color ?? _getProgressColor(context, progress);
+    final backgroundColor =
+        isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.shade200;
 
     return SizedBox(
       width: size,
@@ -41,11 +38,12 @@ class CircularCountdown extends StatelessWidget {
     );
   }
 
-  Color _getProgressColor(double progress) {
+  Color _getProgressColor(BuildContext context, double progress) {
+    final colorScheme = Theme.of(context).colorScheme;
     if (progress <= 0.25) {
-      return AppColors.warning;
+      return colorScheme.tertiary;
     }
-    return AppColors.primary;
+    return colorScheme.primary;
   }
 }
 

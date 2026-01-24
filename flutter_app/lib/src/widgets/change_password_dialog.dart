@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../ffi/gosh_event.dart';
 import '../providers/providers.dart';
-import '../theme/colors.dart';
 
 /// Dialog for changing or removing the YubiKey OATH password.
 class ChangePasswordDialog extends ConsumerStatefulWidget {
@@ -37,14 +36,16 @@ class _ChangePasswordDialogState extends ConsumerState<ChangePasswordDialog> {
     _eventSubscription = client.eventStream.listen((event) {
       if (!mounted) return;
 
+      final colorScheme = Theme.of(context).colorScheme;
+
       switch (event.type) {
         case GoshEventType.passwordChanged:
           setState(() => _isSubmitting = false);
           Navigator.of(context).pop(true);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Password changed successfully'),
-              backgroundColor: AppColors.success,
+            SnackBar(
+              content: const Text('Password changed successfully'),
+              backgroundColor: colorScheme.primary,
             ),
           );
           break;
@@ -52,9 +53,9 @@ class _ChangePasswordDialogState extends ConsumerState<ChangePasswordDialog> {
           setState(() => _isSubmitting = false);
           Navigator.of(context).pop(true);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Password protection removed'),
-              backgroundColor: AppColors.success,
+            SnackBar(
+              content: const Text('Password protection removed'),
+              backgroundColor: colorScheme.primary,
             ),
           );
           break;
@@ -63,16 +64,16 @@ class _ChangePasswordDialogState extends ConsumerState<ChangePasswordDialog> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(event.message ?? 'Failed to change password'),
-              backgroundColor: AppColors.error,
+              backgroundColor: colorScheme.error,
             ),
           );
           break;
         case GoshEventType.authRequired:
           setState(() => _isSubmitting = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please authenticate first'),
-              backgroundColor: AppColors.warning,
+            SnackBar(
+              content: const Text('Please authenticate first'),
+              backgroundColor: colorScheme.tertiary,
             ),
           );
           break;
@@ -92,6 +93,7 @@ class _ChangePasswordDialogState extends ConsumerState<ChangePasswordDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return AlertDialog(
       title: const Text('Change Password'),
       content: Form(
@@ -104,7 +106,7 @@ class _ChangePasswordDialogState extends ConsumerState<ChangePasswordDialog> {
               Text(
                 'Set a new password for your YubiKey OATH credentials.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondary,
+                      color: colorScheme.onSurfaceVariant,
                     ),
               ),
               const SizedBox(height: 16),
@@ -180,26 +182,27 @@ class _ChangePasswordDialogState extends ConsumerState<ChangePasswordDialog> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.warning.withValues(alpha: 0.1),
+                    color: colorScheme.tertiary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: AppColors.warning.withValues(alpha: 0.3),
+                      color: colorScheme.tertiary.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Row(
                     children: [
                       Icon(
                         Icons.warning_amber,
-                        color: AppColors.warning,
+                        color: colorScheme.tertiary,
                         size: 20,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           'This will allow anyone with physical access to view your credentials.',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppColors.warning,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.tertiary,
+                                  ),
                         ),
                       ),
                     ],
