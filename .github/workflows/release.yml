@@ -46,8 +46,10 @@ jobs:
         if: matrix.arch == 'arm64'
         run: |
           git clone https://github.com/flutter/flutter.git -b "${FLUTTER_VERSION}" --depth 1
-          echo "$(pwd)/flutter/bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/flutter/bin:$PATH"
           flutter config --no-analytics
+          flutter --version
+          echo "$(pwd)/flutter/bin" >> "$GITHUB_PATH"
 
       - name: Install dependencies
         run: |
