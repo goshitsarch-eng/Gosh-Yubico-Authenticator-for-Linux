@@ -4,6 +4,9 @@
 #ifdef GDK_WINDOWING_X11
 #include <gdk/gdkx.h>
 #endif
+#ifdef GDK_WINDOWING_WAYLAND
+#include <gdk/gdkwayland.h>
+#endif
 
 #include "flutter/generated_plugin_registrant.h"
 
@@ -13,6 +16,21 @@ struct _MyApplication {
 };
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
+
+// Callback to set Wayland application ID after window is realized
+static void on_window_realize(GtkWidget* widget, gpointer user_data) {
+#ifdef GDK_WINDOWING_WAYLAND
+  GdkDisplay* display = gtk_widget_get_display(widget);
+  if (GDK_IS_WAYLAND_DISPLAY(display)) {
+    GdkWindow* gdk_window = gtk_widget_get_window(widget);
+    if (gdk_window != nullptr && GDK_IS_WAYLAND_WINDOW(gdk_window)) {
+      const gchar* app_id = (const gchar*)user_data;
+      gdk_wayland_window_set_application_id(gdk_window, app_id);
+      g_print("Set Wayland application ID: %s\n", app_id);
+    }
+  }
+#endif
+}
 
 // Implements GApplication::activate.
 static void my_application_activate(GApplication* application) {
@@ -49,6 +67,10 @@ static void my_application_activate(GApplication* application) {
   }
 
   gtk_window_set_default_size(window, 1280, 720);
+  
+  // Connect realize signal to set Wayland application ID at the right time
+  g_signal_connect(window, "realize", G_CALLBACK(on_window_realize), (gpointer)APPLICATION_ID);
+  
   gtk_widget_show(GTK_WIDGET(window));
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();

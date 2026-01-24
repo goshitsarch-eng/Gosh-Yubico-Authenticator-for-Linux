@@ -123,6 +123,17 @@ Try checking if pcscd sees your device:
 pcsc_scan
 ```
 
+### Generic/Wrong Icon in Taskbar (Wayland)
+
+If you're running the application on Wayland (especially KDE Plasma) and seeing a generic Wayland icon in the taskbar instead of the application icon:
+
+**Solution**: This has been fixed in recent versions by setting the window role property. If you're building from source, make sure you have the latest code.
+
+**Workaround for older versions**: 
+1. Ensure the desktop file is properly installed in `~/.local/share/applications/` or `/usr/share/applications/`
+2. The `StartupWMClass` in the desktop file should match: `com.github.gosh.gosh_yubikey_manager`
+3. Log out and log back in to refresh the desktop environment's cache
+
 ## License
 
 GPL-3.0-or-later
