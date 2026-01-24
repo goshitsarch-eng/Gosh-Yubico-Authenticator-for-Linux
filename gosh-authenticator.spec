@@ -19,6 +19,12 @@ BuildRequires:  cargo
 Requires:       pcsc-lite
 Requires:       gtk3
 
+# Disable debug package generation (Flutter builds don't include debug symbols)
+%global debug_package %{nil}
+
+# Disable RPATH checks for Flutter-built libraries
+%global __brp_check_rpaths %{nil}
+
 %description
 Gosh Yubico Authenticator is a Linux desktop application for managing OATH
 (TOTP/HOTP) credentials on YubiKey devices. It features a modern Flutter UI
@@ -35,6 +41,8 @@ cd ..
 
 # Note: Flutter build requires flutter SDK in PATH
 # This spec assumes flutter is available during build
+# Clear RPM-specific compiler flags that are incompatible with clang
+unset CFLAGS CXXFLAGS LDFLAGS
 cd flutter_app
 if command -v flutter &> /dev/null; then
     flutter pub get
@@ -59,7 +67,7 @@ cp -r flutter_app/build/linux/x64/release/bundle/* %{buildroot}%{_libdir}/%{name
 # Create wrapper script
 cat > %{buildroot}%{_bindir}/gosh-authenticator << 'EOF'
 #!/bin/bash
-exec /usr/lib64/gosh-authenticator/gosh_authenticator "$@"
+exec /usr/lib64/gosh-authenticator/gosh_yubikey_manager "$@"
 EOF
 chmod +x %{buildroot}%{_bindir}/gosh-authenticator
 
@@ -94,5 +102,5 @@ install -Dm644 icon.svg %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/gosh
 /usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &> /dev/null || :
 
 %changelog
-* Fri Jan 24 2026 Builder <builder@localhost> - 1.0.0-1
+* Thu Jan 23 2026 Builder <builder@localhost> - 1.0.0-1
 - Initial RPM package
