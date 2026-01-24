@@ -64,6 +64,12 @@ jobs:
           flutter pub get
           flutter build linux --release
 
+      - name: Install RPM build dependencies (x64)
+        if: matrix.arch == 'x64'
+        run: |
+          sudo apt-get install -y \
+            gcc g++ cargo rustc
+
       - name: Build RPM (x64)
         if: matrix.arch == 'x64'
         run: ./build-rpm.sh
