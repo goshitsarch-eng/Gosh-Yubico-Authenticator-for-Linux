@@ -1,15 +1,13 @@
 #!/bin/bash
 set -e
 
-# Script to build the Gosh Authenticator RPM package
+# Script to build the Gosh Authenticator RPM package (pure Rust)
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 NAME="gosh-authenticator"
-VERSION_DEFAULT="1.2.0"
+VERSION_DEFAULT="2.0.0"
 VERSION="${1:-${VERSION:-$VERSION_DEFAULT}}"
 
-# Where rpmbuild writes BUILD/RPMS/SOURCES/etc.
-# Set RPMBUILD_TOPDIR to keep artifacts inside the repo (useful for CI).
 TOPDIR="${RPMBUILD_TOPDIR:-$HOME/rpmbuild}"
 
 echo "===================================="
@@ -20,13 +18,6 @@ echo "===================================="
 echo "Checking prerequisites..."
 if ! command -v rpmbuild &> /dev/null; then
     echo "ERROR: rpmbuild not found. Install with: sudo dnf install rpm-build rpmdevtools"
-    exit 1
-fi
-
-if ! command -v flutter &> /dev/null; then
-    echo "ERROR: flutter not found in PATH"
-    echo "Please install Flutter SDK and add it to your PATH"
-    echo "Download from: https://docs.flutter.dev/get-started/install/linux"
     exit 1
 fi
 
@@ -45,12 +36,9 @@ TEMP_DIR=$(mktemp -d)
 cp -r "$PROJECT_DIR" "$TEMP_DIR/${NAME}-${VERSION}"
 cd "$TEMP_DIR"
 tar --exclude='.git' \
-    --exclude='flutter_app/.dart_tool' \
-    --exclude='flutter_app/build' \
-    --exclude='flutter_app/linux/flutter/ephemeral' \
-    --exclude='flutter_app/windows/flutter/ephemeral' \
-    --exclude='flutter_app/macos/Flutter/ephemeral' \
-    --exclude='rust/target' \
+    --exclude='target' \
+    --exclude='flutter_app' \
+    --exclude='rust' \
     --exclude='*.swp' \
     --exclude='*.kate-swp' \
     -czf "$TOPDIR/SOURCES/${NAME}-${VERSION}.tar.gz" \
@@ -85,6 +73,3 @@ fi
 echo ""
 echo "To install:"
 echo "  sudo dnf install $TOPDIR/RPMS/$RPM_ARCH/${NAME}-${VERSION}-*.rpm"
-echo ""
-echo "Or to test install:"
-echo "  sudo rpm -ivh $TOPDIR/RPMS/$RPM_ARCH/${NAME}-${VERSION}-*.rpm"
