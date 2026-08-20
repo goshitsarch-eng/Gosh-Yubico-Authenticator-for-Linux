@@ -33,6 +33,7 @@ modules:
       - -Dlibudev=false
       - -Dlibsystemd=false
       - -Dpolkit=false
+      - --libdir=/app/lib
     post-install:
       - rm -f /app/sbin/pcscd
       - rmdir /app/sbin || true
