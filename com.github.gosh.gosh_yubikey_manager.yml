@@ -39,6 +39,8 @@ modules:
     cleanup:
       - /lib/libpcscspy.so
       - /lib/libpcsclite.so
+      - /lib64/libpcscspy.so
+      - /lib64/libpcsclite.so
     sources:
       - type: archive
         url: https://pcsclite.apdu.fr/files/pcsc-lite-2.5.1.tar.xz

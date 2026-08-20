@@ -80,7 +80,7 @@ cargo build --release
 **Flatpak from source:**
 
 ```bash
-sudo apt install flatpak flatpak-builder
+sudo apt install flatpak flatpak-builder elfutils
 ./build-flatpak.sh
 ```
 

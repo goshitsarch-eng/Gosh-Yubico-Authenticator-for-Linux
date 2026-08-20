@@ -20,10 +20,8 @@ if [ -z "$VERSION_INPUT" ] && command -v git >/dev/null 2>&1; then
 fi
 VERSION_INPUT="${VERSION_INPUT:-1.2.0}"
 
-if ! command -v flatpak >/dev/null 2>&1 || ! command -v flatpak-builder >/dev/null 2>&1; then
-  echo "ERROR: flatpak and flatpak-builder are required." >&2
-  echo "Install with: sudo apt install flatpak flatpak-builder" >&2
-  exit 1
+if ! command -v eu-strip >/dev/null 2>&1; then
+  echo "NOTE: eu-strip not found. Install elfutils so Flatpak debuginfo stripping works." >&2
 fi
 
 if [ ! -f "$PROJECT_DIR/flatpak/cargo-sources.json" ]; then
