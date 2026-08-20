@@ -59,12 +59,15 @@ mkdir -p "$PKG_DIR/DEBIAN"
 mkdir -p "$PKG_DIR/usr/bin"
 mkdir -p "$PKG_DIR/usr/share/applications"
 mkdir -p "$PKG_DIR/usr/share/icons/hicolor/scalable/apps"
+mkdir -p "$PKG_DIR/usr/share/metainfo"
 
 install -m 0755 "$BIN" "$PKG_DIR/usr/bin/gosh-authenticator"
 install -m 0644 "$PROJECT_DIR/data/applications/com.github.gosh.gosh_yubikey_manager.desktop" \
   "$PKG_DIR/usr/share/applications/com.github.gosh.gosh_yubikey_manager.desktop"
 install -m 0644 "$PROJECT_DIR/icon.svg" \
   "$PKG_DIR/usr/share/icons/hicolor/scalable/apps/com.github.gosh.gosh_yubikey_manager.svg"
+install -m 0644 "$PROJECT_DIR/data/metainfo/com.github.gosh.gosh_yubikey_manager.metainfo.xml" \
+  "$PKG_DIR/usr/share/metainfo/com.github.gosh.gosh_yubikey_manager.metainfo.xml"
 
 cat > "$PKG_DIR/DEBIAN/control" << EOF
 Package: ${NAME}

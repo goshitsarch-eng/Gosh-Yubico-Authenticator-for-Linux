@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.github.gosh.gosh_yubikey_manager</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Gosh Yubikey Manager</name>
+  <summary>Manage OATH credentials on YubiKey devices</summary>
+  <description>
+    <p>
+      Gosh Yubikey Manager is a native GTK 4 / Adwaita desktop application for
+      managing OATH (TOTP and HOTP) credentials stored on YubiKey devices.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Generate TOTP and HOTP codes from credentials on the key</li>
+      <li>Add credentials from a secret or by scanning a QR image</li>
+      <li>Protect the key with an OATH PIN and require touch when needed</li>
+      <li>Copy codes to the clipboard with automatic clearing</li>
+      <li>Follow the system theme, or force light or dark</li>
+    </ul>
+    <p>
+      The Flatpak talks to the host PC/SC daemon. Install and start pcscd on
+      the host before inserting a YubiKey.
+    </p>
+  </description>
+  <url type="homepage">https://github.com/goshitsarch-eng/Gosh-Yubico-Authenticator-for-Linux</url>
+  <url type="bugtracker">https://github.com/goshitsarch-eng/Gosh-Yubico-Authenticator-for-Linux/issues</url>
+  <url type="vcs-browser">https://github.com/goshitsarch-eng/Gosh-Yubico-Authenticator-for-Linux</url>
+  <launchable type="desktop-id">com.github.gosh.gosh_yubikey_manager.desktop</launchable>
+  <provides>
+    <binary>gosh-authenticator</binary>
+  </provides>
+  <developer id="com.github.gosh">
+    <name>Goshitsarch</name>
+  </developer>
+  <content_rating type="oars-1.1"/>
+  <recommends>
+    <control>keyboard</control>
+    <control>pointing</control>
+    <display_length compare="ge">360</display_length>
+  </recommends>
+  <categories>
+    <category>Utility</category>
+    <category>Security</category>
+    <category>System</category>
+  </categories>
+  <branding>
+    <color type="primary" scheme_preference="light">#3584e4</color>
+    <color type="primary" scheme_preference="dark">#1c71d8</color>
+  </branding>
+  <releases>
+    <release version="1.2.0" date="2026-08-20">
+      <description>
+        <p>Native GTK 4 / Adwaita rewrite with Flatpak packaging.</p>
+      </description>
+    </release>
+  </releases>
+</component>

@@ -30,6 +30,14 @@ The RPM installs:
 - Binary: `/usr/bin/gosh-authenticator`
 - Desktop entry: `/usr/share/applications/com.github.gosh.gosh_yubikey_manager.desktop`
 - Icon: `/usr/share/icons/hicolor/scalable/apps/com.github.gosh.gosh_yubikey_manager.svg`
+- AppStream metainfo: `/usr/share/metainfo/com.github.gosh.gosh_yubikey_manager.metainfo.xml`
+
+For a sandboxed install, prefer the Flatpak:
+
+```bash
+./build-flatpak.sh
+flatpak run com.github.gosh.gosh_yubikey_manager
+```
 
 ## Dependencies
 

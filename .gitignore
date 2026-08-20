@@ -19,3 +19,8 @@ rust/target/
 # Local config/cache
 *.swp
 *.kate-swp
+
+# Flatpak
+.flatpak-builder/
+repo/
+*.flatpak

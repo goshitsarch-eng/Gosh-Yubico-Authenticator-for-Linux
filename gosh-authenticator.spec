@@ -35,6 +35,8 @@ install -D -m 0644 data/applications/com.github.gosh.gosh_yubikey_manager.deskto
   %{buildroot}%{_datadir}/applications/com.github.gosh.gosh_yubikey_manager.desktop
 install -D -m 0644 icon.svg \
   %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/com.github.gosh.gosh_yubikey_manager.svg
+install -D -m 0644 data/metainfo/com.github.gosh.gosh_yubikey_manager.metainfo.xml \
+  %{buildroot}%{_datadir}/metainfo/com.github.gosh.gosh_yubikey_manager.metainfo.xml
 
 %files
 %license LICENSE
@@ -42,6 +44,7 @@ install -D -m 0644 icon.svg \
 %{_bindir}/gosh-authenticator
 %{_datadir}/applications/com.github.gosh.gosh_yubikey_manager.desktop
 %{_datadir}/icons/hicolor/scalable/apps/com.github.gosh.gosh_yubikey_manager.svg
+%{_datadir}/metainfo/com.github.gosh.gosh_yubikey_manager.metainfo.xml
 
 %post
 /usr/bin/update-desktop-database &> /dev/null || :
@@ -54,3 +57,4 @@ install -D -m 0644 icon.svg \
 %changelog
 * Thu Aug 20 2026 Builder <builder@localhost> - 1.2.0-1
 - Rewrite as native GTK 4 / Adwaita application
+- Add Flatpak packaging (GNOME 50 runtime)

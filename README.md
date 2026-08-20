@@ -35,13 +35,27 @@ sudo pacman -S pcsclite
 sudo systemctl enable --now pcscd
 ```
 
-**Run the application:**
+**Install the Flatpak (recommended):**
+
+```bash
+# From a release bundle:
+flatpak install --user ./com.github.gosh.gosh_yubikey_manager.flatpak
+flatpak run com.github.gosh.gosh_yubikey_manager
+
+# Or build and install from this repository:
+./build-flatpak.sh
+```
+
+The Flatpak talks to the **host** `pcscd` over the `pcsc` socket. Keep the
+daemon running on the host; do not expect a daemon inside the sandbox.
+
+**Other packages:**
 
 ```bash
 # From a release tarball:
 ./gosh-authenticator
 
-# Or install the package:
+# Distro packages:
 sudo dnf install gosh-authenticator-*.rpm
 sudo apt install ./gosh-authenticator_*.deb
 ```
@@ -57,10 +71,27 @@ sudo apt install build-essential pkg-config libgtk-4-dev libadwaita-1-dev libpcs
 # Fedora
 sudo dnf install gcc pkgconf-pkg-config gtk4-devel libadwaita-devel pcsc-lite-devel
 
-# Build
+# Build the native binary
 cd rust
 cargo build --release
 ./target/release/gosh-authenticator
+```
+
+**Flatpak from source:**
+
+```bash
+sudo apt install flatpak flatpak-builder
+./build-flatpak.sh
+```
+
+`./build-flatpak.sh` installs the GNOME 50 SDK and the `rust-stable` extension
+from Flathub, builds `com.github.gosh.gosh_yubikey_manager`, installs it for
+the current user, and writes a `.flatpak` bundle under `dist/`.
+
+If you change Rust dependencies, regenerate the offline crate sources:
+
+```bash
+python3 flatpak/generate-cargo-sources.py
 ```
 
 ## Troubleshooting

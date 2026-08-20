@@ -7,19 +7,33 @@ Platform: Linux
 DISTRIBUTION FORMATS
 --------------------
 
-1. RPM Package
+1. Flatpak (recommended)
+   - Sandboxed GTK 4 / Adwaita app: com.github.gosh.gosh_yubikey_manager
+   - Works on any distro with Flatpak
+   - Uses the host pcscd via --socket=pcsc
+
+2. RPM Package
    - For Fedora, RHEL, Rocky Linux, AlmaLinux, openSUSE
    - Includes automatic desktop integration
 
-2. DEB Package
+3. DEB Package
    - For Debian, Ubuntu, and derivatives
 
-3. Tarball
+4. Tarball
    - Portable binary for any Linux distribution
    - No package manager required
 
 INSTALLATION METHODS
 --------------------
+
+### Flatpak
+
+  flatpak install --user ./com.github.gosh.gosh_yubikey_manager.flatpak
+  flatpak run com.github.gosh.gosh_yubikey_manager
+
+  Or from this repository:
+
+  ./build-flatpak.sh
 
 ### RPM
 

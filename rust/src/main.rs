@@ -54,6 +54,7 @@ fn add_icon_search_paths() {
             paths.push(dir.join("share/icons"));
         }
     }
+    paths.push(PathBuf::from("/app/share/icons"));
     paths.push(PathBuf::from("/usr/share/icons"));
     paths.push(PathBuf::from("/usr/local/share/icons"));
 
