@@ -57,6 +57,8 @@ pub fn build_ui(app: &adw::Application) {
         .title(APP_NAME)
         .default_width(960)
         .default_height(680)
+        .width_request(480)
+        .height_request(400)
         .build();
     window.set_icon_name(Some(APP_ID));
 
@@ -231,9 +233,6 @@ pub fn build_ui(app: &adw::Application) {
         let state = Rc::clone(&state);
         let widgets = Rc::clone(&widgets);
         move |_| {
-            if state.connection.get() != ConnectionStatus::Connected {
-                return;
-            }
             let add = AddPage::new(
                 Rc::clone(&state),
                 widgets.window.clone(),
@@ -626,7 +625,7 @@ fn update_header_buttons(state: &Rc<AppState>, widgets: &Rc<Widgets>) {
         .visible_child_name()
         .map(|n| n == "credentials")
         .unwrap_or(true);
-    widgets.add_button.set_visible(connected && on_creds);
+    widgets.add_button.set_visible(on_creds);
     widgets.refresh_button.set_visible(connected);
 }
 
