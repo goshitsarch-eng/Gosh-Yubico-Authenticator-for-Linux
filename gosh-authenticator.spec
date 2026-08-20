@@ -1,95 +1,45 @@
 Name:           gosh-authenticator
 Version:        1.2.0
 Release:        1%{?dist}
-Summary:        A desktop application for managing OATH credentials on YubiKey devices
-License:        MIT
-URL:            https://github.com/gosh/Gosh-Yubico-Authenticator-for-Linux
+Summary:        Native GTK 4 app for managing OATH credentials on YubiKey devices
+License:        GPL-3.0-or-later
+URL:            https://github.com/goshitsarch-eng/Gosh-Yubico-Authenticator-for-Linux
 Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  gcc
-BuildRequires:  gcc-c++
-BuildRequires:  cmake
-BuildRequires:  ninja-build
-BuildRequires:  pkgconfig(gtk+-3.0)
+BuildRequires:  pkgconfig(gtk4)
+BuildRequires:  pkgconfig(libadwaita-1)
 BuildRequires:  pcsc-lite-devel
-BuildRequires:  clang
 BuildRequires:  rust
 BuildRequires:  cargo
 
 Requires:       pcsc-lite
-Requires:       gtk3
-
-# Disable debug package generation (Flutter builds don't include debug symbols)
-%global debug_package %{nil}
-
-# Disable RPATH checks for Flutter-built libraries
-%global __brp_check_rpaths %{nil}
-
-# Flutter's Linux build output directory differs by target architecture.
-%global flutter_arch x64
-%ifarch aarch64
-%global flutter_arch arm64
-%endif
+Requires:       gtk4
+Requires:       libadwaita
 
 %description
-Gosh Yubico Authenticator is a Linux desktop application for managing OATH
-(TOTP/HOTP) credentials on YubiKey devices. It features a modern Flutter UI
-with a high-performance Rust core for direct hardware communication.
+Gosh Yubico Authenticator is a native GTK 4 / Adwaita Linux desktop
+application for managing OATH (TOTP/HOTP) credentials on YubiKey devices.
 
 %prep
 %autosetup
 
 %build
-# Build Rust library
 cd rust
-cargo build --release
-cd ..
-
-# Note: Flutter build requires flutter SDK in PATH
-# This spec assumes flutter is available during build
-# Clear RPM-specific compiler flags that are incompatible with clang
-unset CFLAGS CXXFLAGS LDFLAGS
-cd flutter_app
-if command -v flutter &> /dev/null; then
-    flutter pub get
-    flutter build linux --release
-else
-    echo "ERROR: Flutter SDK not found in PATH"
-    echo "Please install Flutter SDK and add it to PATH before building"
-    exit 1
-fi
-cd ..
+cargo build --release --locked
 
 %install
-# Create necessary directories
-mkdir -p %{buildroot}%{_bindir}
-mkdir -p %{buildroot}%{_libdir}/%{name}
-mkdir -p %{buildroot}%{_datadir}/applications
-mkdir -p %{buildroot}%{_datadir}/icons/hicolor/scalable/apps
-
-# Install the Flutter application
-cp -r flutter_app/build/linux/%{flutter_arch}/release/bundle/* %{buildroot}%{_libdir}/%{name}/
-
-# Create wrapper script
-cat > %{buildroot}%{_bindir}/gosh-authenticator << 'EOF'
-#!/bin/bash
-exec /usr/lib64/gosh-authenticator/gosh_yubikey_manager "$@"
-EOF
-chmod +x %{buildroot}%{_bindir}/gosh-authenticator
-
-# Install desktop file with correct app ID name and fix Exec path
-install -Dm644 flutter_app/com.github.gosh.gosh_yubikey_manager.desktop \
+install -D -m 0755 rust/target/release/gosh-authenticator \
+  %{buildroot}%{_bindir}/gosh-authenticator
+install -D -m 0644 data/applications/com.github.gosh.gosh_yubikey_manager.desktop \
   %{buildroot}%{_datadir}/applications/com.github.gosh.gosh_yubikey_manager.desktop
-# Update Exec path to use the wrapper script
-sed -i 's|Exec=gosh_yubikey_manager|Exec=gosh-authenticator|' \
-  %{buildroot}%{_datadir}/applications/com.github.gosh.gosh_yubikey_manager.desktop
-
-# Install icon
-install -Dm644 icon.svg %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/com.github.gosh.gosh_yubikey_manager.svg
+install -D -m 0644 icon.svg \
+  %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/com.github.gosh.gosh_yubikey_manager.svg
 
 %files
+%license LICENSE
+%doc README.md
 %{_bindir}/gosh-authenticator
-%{_libdir}/%{name}/
 %{_datadir}/applications/com.github.gosh.gosh_yubikey_manager.desktop
 %{_datadir}/icons/hicolor/scalable/apps/com.github.gosh.gosh_yubikey_manager.svg
 
@@ -102,8 +52,5 @@ install -Dm644 icon.svg %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/com.
 /usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &> /dev/null || :
 
 %changelog
-* Sat Jan 24 2026 Builder <builder@localhost> - 1.2.0-1
-- Update to v1.2.0
-
-* Fri Jan 23 2026 Builder <builder@localhost> - 1.0.0-1
-- Initial RPM package
+* Thu Aug 20 2026 Builder <builder@localhost> - 1.2.0-1
+- Rewrite as native GTK 4 / Adwaita application

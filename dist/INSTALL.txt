@@ -1,76 +1,46 @@
 Gosh Authenticator for Linux - Installation Instructions
 ========================================================
 
-Version: 1.0.0
-Platform: Linux x86_64
+Version: 1.2.0
+Platform: Linux
 
 DISTRIBUTION FORMATS
 --------------------
 
-1. RPM Package (gosh-authenticator-1.0.0-1.fc43.x86_64.rpm)
+1. RPM Package
    - For Fedora, RHEL, Rocky Linux, AlmaLinux, openSUSE
    - Includes automatic desktop integration
-   - Recommended for system-wide installation
 
-2. Tarball (gosh-authenticator-1.0.0-linux-x64.tar.gz)
-   - Portable bundle for any Linux distribution
+2. DEB Package
+   - For Debian, Ubuntu, and derivatives
+
+3. Tarball
+   - Portable binary for any Linux distribution
    - No package manager required
-   - Can run from any location
 
 INSTALLATION METHODS
 --------------------
 
-### Option 1: RPM Package (Recommended for Fedora/RHEL-based systems)
+### RPM
 
-Install with dnf:
-  sudo dnf install ./gosh-authenticator-1.0.0-1.fc43.x86_64.rpm
+  sudo dnf install ./gosh-authenticator-1.2.0-1.fc43.x86_64.rpm
 
-Or with rpm:
-  sudo rpm -ivh gosh-authenticator-1.0.0-1.fc43.x86_64.rpm
+### DEB
 
-The package will:
-- Install binary to /usr/bin/gosh-authenticator
-- Install desktop file to /usr/share/applications/
-- Install icon to /usr/share/icons/hicolor/
-- Automatically update desktop database and icon cache
+  sudo apt install ./gosh-authenticator_1.2.0_amd64.deb
 
-To uninstall:
-  sudo dnf remove gosh-authenticator
+### Tarball
 
-
-### Option 2: Tarball (For any Linux distribution)
-
-Extract the tarball:
-  tar -xzf gosh-authenticator-1.0.0-linux-x64.tar.gz
-  cd gosh-authenticator-1.0.0-linux-x64
-
-Run directly:
-  ./gosh_yubikey_manager
-
-For desktop integration (optional):
-  # Copy desktop file
-  mkdir -p ~/.local/share/applications
-  cp com.github.gosh.gosh_yubikey_manager.desktop ~/.local/share/applications/
-  
-  # Update Exec path in desktop file to point to your installation
-  sed -i "s|Exec=gosh_yubikey_manager|Exec=$PWD/gosh_yubikey_manager|" \
-    ~/.local/share/applications/com.github.gosh.gosh_yubikey_manager.desktop
-  
-  # Copy icon
-  mkdir -p ~/.local/share/icons/hicolor/scalable/apps
-  cp icon.svg ~/.local/share/icons/hicolor/scalable/apps/com.github.gosh.gosh_yubikey_manager.svg
-  
-  # Update databases
-  update-desktop-database ~/.local/share/applications
-  gtk-update-icon-cache ~/.local/share/icons/hicolor
+  tar -xzf gosh-authenticator-1.2.0-linux-x64.tar.gz
+  cd gosh-authenticator-1.2.0-linux-x64
+  ./gosh-authenticator
 
 REQUIREMENTS
 ------------
 
-Runtime dependencies:
 - pcscd (PC/SC Smart Card Daemon)
-- GTK 3
-- Standard system libraries (glibc, etc.)
+- GTK 4
+- libadwaita
 
 To install pcscd:
   Fedora/RHEL: sudo dnf install pcsc-lite
@@ -85,17 +55,8 @@ USAGE
 
 1. Insert your YubiKey
 2. Launch "Gosh Yubikey Manager" from your application menu
-   or run: gosh-authenticator (RPM) or ./gosh_yubikey_manager (tarball)
+   or run: gosh-authenticator
 3. Manage your OATH credentials
-
-TROUBLESHOOTING
----------------
-
-If the icon doesn't appear correctly in the taskbar on KDE Plasma Wayland:
-- Log out and log back in to refresh the desktop cache
-- Ensure the desktop file is properly installed
-
-For more information, see README.md
 
 LICENSE
 -------

@@ -11,18 +11,11 @@
 
 # Rust
 rust/target/
-Cargo.lock
-
-# Qt/CMake
-/.qt
-/CMakeFiles
-/CMakeCache.txt
-/cmake_install.cmake
 
 # IDE
 /.vscode
 /.idea
 
-# Flutter
-flutter_app/build/
-flutter_app/.dart_tool/
+# Local config/cache
+*.swp
+*.kate-swp

@@ -139,16 +139,16 @@ mod tests {
 
     #[test]
     fn test_decode_secret() {
-        // Standard test vector from RFC 4226
-        let secret = decode_secret("GEZDGNBVGY3TQOJQ").unwrap();
+        // RFC 4226 test secret "12345678901234567890"
+        let secret = decode_secret("GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ").unwrap();
         assert_eq!(secret, b"12345678901234567890");
 
         // With spaces
-        let secret = decode_secret("GEZD GNBV GY3T QOJQ").unwrap();
+        let secret = decode_secret("GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ").unwrap();
         assert_eq!(secret, b"12345678901234567890");
 
         // Lowercase
-        let secret = decode_secret("gezdgnbvgy3tqojq").unwrap();
+        let secret = decode_secret("gezdgnbvgy3tqojqgezdgnbvgy3tqojq").unwrap();
         assert_eq!(secret, b"12345678901234567890");
     }
 }
