@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Gosh Yubikey Manager
+Exec=gosh-authenticator
+Icon=com.github.gosh.gosh_yubikey_manager
+Terminal=false
+StartupNotify=true
+StartupWMClass=com.github.gosh.gosh_yubikey_manager
+Categories=Utility;Security;
+Comment=Manage OATH credentials on YubiKey devices
+Keywords=yubikey;authenticator;totp;hotp;2fa;oath;
+DBusActivatable=false

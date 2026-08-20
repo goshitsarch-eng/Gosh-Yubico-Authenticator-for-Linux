@@ -1,12 +1,11 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-# Script to build the Gosh Authenticator DEB package
+# Build the Gosh Authenticator DEB package from the native GTK 4 binary.
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 NAME="gosh-authenticator"
 
-# Priority: arg > env > git tag > fallback
 VERSION_INPUT="${1:-${VERSION:-}}"
 if [ -z "$VERSION_INPUT" ] && command -v git >/dev/null 2>&1; then
   TAG="$(git -C "$PROJECT_DIR" describe --tags --abbrev=0 2>/dev/null || true)"
@@ -25,12 +24,7 @@ if [ -z "$ARCH_INPUT" ]; then
 fi
 
 case "$ARCH_INPUT" in
-  amd64)
-    FLUTTER_ARCH_DIR="x64"
-    ;;
-  arm64)
-    FLUTTER_ARCH_DIR="arm64"
-    ;;
+  amd64|arm64) ;;
   *)
     echo "ERROR: unsupported deb arch '$ARCH_INPUT' (expected amd64 or arm64)" >&2
     exit 1
@@ -42,10 +36,10 @@ if ! command -v dpkg-deb >/dev/null 2>&1; then
   exit 1
 fi
 
-BUNDLE_DIR="$PROJECT_DIR/flutter_app/build/linux/${FLUTTER_ARCH_DIR}/release/bundle"
-if [ ! -f "$BUNDLE_DIR/gosh_yubikey_manager" ]; then
-  echo "ERROR: Flutter bundle not found at: $BUNDLE_DIR" >&2
-  echo "Build it first: (cd flutter_app && flutter pub get && flutter build linux --release)" >&2
+BIN="$PROJECT_DIR/rust/target/release/gosh-authenticator"
+if [ ! -x "$BIN" ]; then
+  echo "ERROR: native binary not found at: $BIN" >&2
+  echo "Build it first: (cd rust && cargo build --release)" >&2
   exit 1
 fi
 
@@ -63,31 +57,24 @@ PKG_DIR="$STAGE_DIR/${NAME}_${VERSION_INPUT}_${ARCH_INPUT}"
 
 mkdir -p "$PKG_DIR/DEBIAN"
 mkdir -p "$PKG_DIR/usr/bin"
-mkdir -p "$PKG_DIR/usr/lib/${NAME}"
 mkdir -p "$PKG_DIR/usr/share/applications"
 mkdir -p "$PKG_DIR/usr/share/icons/hicolor/scalable/apps"
+mkdir -p "$PKG_DIR/usr/share/icons/hicolor/64x64/apps"
+mkdir -p "$PKG_DIR/usr/share/icons/hicolor/128x128/apps"
+mkdir -p "$PKG_DIR/usr/share/metainfo"
 
-# Install bundle
-cp -r "$BUNDLE_DIR"/* "$PKG_DIR/usr/lib/${NAME}/"
-
-# Wrapper
-cat > "$PKG_DIR/usr/bin/gosh-authenticator" << 'EOF'
-#!/bin/bash
-exec /usr/lib/gosh-authenticator/gosh_yubikey_manager "$@"
-EOF
-chmod 0755 "$PKG_DIR/usr/bin/gosh-authenticator"
-
-# Desktop file
-install -m 0644 "$PROJECT_DIR/flutter_app/com.github.gosh.gosh_yubikey_manager.desktop" \
+install -m 0755 "$BIN" "$PKG_DIR/usr/bin/gosh-authenticator"
+install -m 0644 "$PROJECT_DIR/data/applications/com.github.gosh.gosh_yubikey_manager.desktop" \
   "$PKG_DIR/usr/share/applications/com.github.gosh.gosh_yubikey_manager.desktop"
-sed -i 's|Exec=gosh_yubikey_manager|Exec=gosh-authenticator|' \
-  "$PKG_DIR/usr/share/applications/com.github.gosh.gosh_yubikey_manager.desktop"
-
-# Icon
-install -m 0644 "$PROJECT_DIR/icon.svg" \
+install -m 0644 "$PROJECT_DIR/data/icons/hicolor/scalable/apps/com.github.gosh.gosh_yubikey_manager.svg" \
   "$PKG_DIR/usr/share/icons/hicolor/scalable/apps/com.github.gosh.gosh_yubikey_manager.svg"
+install -m 0644 "$PROJECT_DIR/data/icons/hicolor/64x64/apps/com.github.gosh.gosh_yubikey_manager.png" \
+  "$PKG_DIR/usr/share/icons/hicolor/64x64/apps/com.github.gosh.gosh_yubikey_manager.png"
+install -m 0644 "$PROJECT_DIR/data/icons/hicolor/128x128/apps/com.github.gosh.gosh_yubikey_manager.png" \
+  "$PKG_DIR/usr/share/icons/hicolor/128x128/apps/com.github.gosh.gosh_yubikey_manager.png"
+install -m 0644 "$PROJECT_DIR/data/metainfo/com.github.gosh.gosh_yubikey_manager.metainfo.xml" \
+  "$PKG_DIR/usr/share/metainfo/com.github.gosh.gosh_yubikey_manager.metainfo.xml"
 
-# Control
 cat > "$PKG_DIR/DEBIAN/control" << EOF
 Package: ${NAME}
 Version: ${VERSION_INPUT}
@@ -95,26 +82,22 @@ Section: utils
 Priority: optional
 Architecture: ${ARCH_INPUT}
 Maintainer: Builder <builder@localhost>
-Depends: libgtk-3-0, libpcsclite1
+Depends: libgtk-4-1, libadwaita-1-0, libpcsclite1
 Description: Desktop app for managing OATH credentials on YubiKey
- Gosh Authenticator is a Linux desktop application for managing OATH
- (TOTP/HOTP) credentials on YubiKey devices.
+ Gosh Authenticator is a native GTK 4 / Adwaita Linux desktop application
+ for managing OATH (TOTP/HOTP) credentials on YubiKey devices.
 EOF
 chmod 0644 "$PKG_DIR/DEBIAN/control"
 
-# postinst/postrm (best-effort)
 cat > "$PKG_DIR/DEBIAN/postinst" << 'EOF'
 #!/bin/sh
 set -e
-
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database >/dev/null 2>&1 || true
 fi
-
 if command -v gtk-update-icon-cache >/dev/null 2>&1; then
   gtk-update-icon-cache -f /usr/share/icons/hicolor >/dev/null 2>&1 || true
 fi
-
 exit 0
 EOF
 chmod 0755 "$PKG_DIR/DEBIAN/postinst"
@@ -122,22 +105,18 @@ chmod 0755 "$PKG_DIR/DEBIAN/postinst"
 cat > "$PKG_DIR/DEBIAN/postrm" << 'EOF'
 #!/bin/sh
 set -e
-
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database >/dev/null 2>&1 || true
 fi
-
 if command -v gtk-update-icon-cache >/dev/null 2>&1; then
   gtk-update-icon-cache -f /usr/share/icons/hicolor >/dev/null 2>&1 || true
 fi
-
 exit 0
 EOF
 chmod 0755 "$PKG_DIR/DEBIAN/postrm"
 
 mkdir -p "$PROJECT_DIR/dist"
 dpkg-deb --build "$PKG_DIR" "$OUT_PATH" >/dev/null
-
 rm -rf "$STAGE_DIR"
 
 echo ""
