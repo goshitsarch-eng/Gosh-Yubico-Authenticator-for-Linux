@@ -33,8 +33,12 @@ install -D -m 0755 rust/target/release/gosh-authenticator \
   %{buildroot}%{_bindir}/gosh-authenticator
 install -D -m 0644 data/applications/com.github.gosh.gosh_yubikey_manager.desktop \
   %{buildroot}%{_datadir}/applications/com.github.gosh.gosh_yubikey_manager.desktop
-install -D -m 0644 icon.svg \
+install -D -m 0644 data/icons/hicolor/scalable/apps/com.github.gosh.gosh_yubikey_manager.svg \
   %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/com.github.gosh.gosh_yubikey_manager.svg
+install -D -m 0644 data/icons/hicolor/64x64/apps/com.github.gosh.gosh_yubikey_manager.png \
+  %{buildroot}%{_datadir}/icons/hicolor/64x64/apps/com.github.gosh.gosh_yubikey_manager.png
+install -D -m 0644 data/icons/hicolor/128x128/apps/com.github.gosh.gosh_yubikey_manager.png \
+  %{buildroot}%{_datadir}/icons/hicolor/128x128/apps/com.github.gosh.gosh_yubikey_manager.png
 install -D -m 0644 data/metainfo/com.github.gosh.gosh_yubikey_manager.metainfo.xml \
   %{buildroot}%{_datadir}/metainfo/com.github.gosh.gosh_yubikey_manager.metainfo.xml
 
@@ -44,6 +48,8 @@ install -D -m 0644 data/metainfo/com.github.gosh.gosh_yubikey_manager.metainfo.x
 %{_bindir}/gosh-authenticator
 %{_datadir}/applications/com.github.gosh.gosh_yubikey_manager.desktop
 %{_datadir}/icons/hicolor/scalable/apps/com.github.gosh.gosh_yubikey_manager.svg
+%{_datadir}/icons/hicolor/64x64/apps/com.github.gosh.gosh_yubikey_manager.png
+%{_datadir}/icons/hicolor/128x128/apps/com.github.gosh.gosh_yubikey_manager.png
 %{_datadir}/metainfo/com.github.gosh.gosh_yubikey_manager.metainfo.xml
 
 %post

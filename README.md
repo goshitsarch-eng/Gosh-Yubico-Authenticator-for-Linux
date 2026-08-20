@@ -80,7 +80,7 @@ cargo build --release
 **Flatpak from source:**
 
 ```bash
-sudo apt install flatpak flatpak-builder elfutils
+sudo apt install flatpak flatpak-builder elfutils librsvg2-common
 ./build-flatpak.sh
 ```
 

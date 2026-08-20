@@ -23,6 +23,9 @@ VERSION_INPUT="${VERSION_INPUT:-1.2.0}"
 if ! command -v eu-strip >/dev/null 2>&1; then
   echo "NOTE: eu-strip not found. Install elfutils so Flatpak debuginfo stripping works." >&2
 fi
+if ! command -v rsvg-convert >/dev/null 2>&1; then
+  echo "NOTE: rsvg-convert not found. Install librsvg2-bin if you need to regenerate PNG icons." >&2
+fi
 
 if [ ! -f "$PROJECT_DIR/flatpak/cargo-sources.json" ]; then
   echo "ERROR: missing flatpak/cargo-sources.json" >&2

@@ -37,6 +37,7 @@ modules:
     post-install:
       - rm -f /app/sbin/pcscd
       - rmdir /app/sbin || true
+      - rm -f /app/share/metainfo/fr.apdu.pcsclite.metainfo.xml
     cleanup:
       - /lib/libpcscspy.so
       - /lib/libpcsclite.so
@@ -57,12 +58,15 @@ modules:
       env:
         CARGO_HOME: /run/build/gosh-authenticator/cargo
         CARGO_NET_OFFLINE: "true"
+        PKG_CONFIG_PATH: /app/lib/pkgconfig:/app/lib64/pkgconfig:/app/share/pkgconfig
     build-commands:
       - rustc --version
       - cargo --offline build --locked --release --manifest-path rust/Cargo.toml --verbose
       - install -Dm755 rust/target/release/gosh-authenticator /app/bin/gosh-authenticator
       - install -Dm644 data/applications/com.github.gosh.gosh_yubikey_manager.desktop /app/share/applications/com.github.gosh.gosh_yubikey_manager.desktop
       - install -Dm644 data/icons/hicolor/scalable/apps/com.github.gosh.gosh_yubikey_manager.svg /app/share/icons/hicolor/scalable/apps/com.github.gosh.gosh_yubikey_manager.svg
+      - install -Dm644 data/icons/hicolor/64x64/apps/com.github.gosh.gosh_yubikey_manager.png /app/share/icons/hicolor/64x64/apps/com.github.gosh.gosh_yubikey_manager.png
+      - install -Dm644 data/icons/hicolor/128x128/apps/com.github.gosh.gosh_yubikey_manager.png /app/share/icons/hicolor/128x128/apps/com.github.gosh.gosh_yubikey_manager.png
       - install -Dm644 data/metainfo/com.github.gosh.gosh_yubikey_manager.metainfo.xml /app/share/metainfo/com.github.gosh.gosh_yubikey_manager.metainfo.xml
       - install -Dm644 LICENSE /app/share/licenses/com.github.gosh.gosh_yubikey_manager/LICENSE
     sources:
