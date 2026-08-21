@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>com.github.gosh.gosh_yubikey_manager</id>
+  <id>com.goshapps.YubicoAuthenticator</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <name>Gosh Yubikey Manager</name>
@@ -26,11 +26,11 @@
   <url type="homepage">https://github.com/goshitsarch-eng/Gosh-Yubico-Authenticator-for-Linux</url>
   <url type="bugtracker">https://github.com/goshitsarch-eng/Gosh-Yubico-Authenticator-for-Linux/issues</url>
   <url type="vcs-browser">https://github.com/goshitsarch-eng/Gosh-Yubico-Authenticator-for-Linux</url>
-  <launchable type="desktop-id">com.github.gosh.gosh_yubikey_manager.desktop</launchable>
+  <launchable type="desktop-id">com.goshapps.YubicoAuthenticator.desktop</launchable>
   <provides>
     <binary>gosh-authenticator</binary>
   </provides>
-  <developer id="com.github.gosh">
+  <developer id="com.goshapps">
     <name>Goshitsarch</name>
   </developer>
   <content_rating type="oars-1.1"/>

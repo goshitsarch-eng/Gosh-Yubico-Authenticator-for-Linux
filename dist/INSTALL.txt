@@ -8,7 +8,7 @@ DISTRIBUTION FORMATS
 --------------------
 
 1. Flatpak (recommended)
-   - Sandboxed GTK 4 / Adwaita app: com.github.gosh.gosh_yubikey_manager
+   - Sandboxed GTK 4 / Adwaita app: com.goshapps.YubicoAuthenticator
    - Works on any distro with Flatpak
    - Uses the host pcscd via --socket=pcsc
 
@@ -28,8 +28,8 @@ INSTALLATION METHODS
 
 ### Flatpak
 
-  flatpak install --user ./com.github.gosh.gosh_yubikey_manager.flatpak
-  flatpak run com.github.gosh.gosh_yubikey_manager
+  flatpak install --user ./com.goshapps.YubicoAuthenticator.flatpak
+  flatpak run com.goshapps.YubicoAuthenticator
 
   Or from this repository:
 

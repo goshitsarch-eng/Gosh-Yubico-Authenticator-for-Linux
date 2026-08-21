@@ -22,4 +22,4 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y appstream
           appstreamcli validate --no-net --explain \
-            data/metainfo/com.github.gosh.gosh_yubikey_manager.metainfo.xml
+            data/metainfo/com.goshapps.YubicoAuthenticator.metainfo.xml

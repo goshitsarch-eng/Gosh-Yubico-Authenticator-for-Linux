@@ -9,7 +9,7 @@ The project uses GitHub Actions to automatically build and release packages when
 ### What Gets Built
 
 For each release, the workflow builds:
-- **Flatpak bundle** (`com.github.gosh.gosh_yubikey_manager`)
+- **Flatpak bundle** (`com.goshapps.YubicoAuthenticator`)
 - **RPM packages** for Fedora/RHEL (x64 and ARM64)
 - **DEB packages** for Debian/Ubuntu (amd64 and arm64)
 - **Portable tarballs** (x64 and ARM64)
