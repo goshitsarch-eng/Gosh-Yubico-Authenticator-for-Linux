@@ -4,7 +4,7 @@ set -euo pipefail
 # Build and optionally install the Gosh Authenticator Flatpak.
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
-APP_ID="com.github.gosh.gosh_yubikey_manager"
+APP_ID="com.goshapps.YubicoAuthenticator"
 MANIFEST="$PROJECT_DIR/${APP_ID}.yml"
 BUILD_DIR="${FLATPAK_BUILD_DIR:-$PROJECT_DIR/.flatpak-builder/app}"
 STATE_DIR="${FLATPAK_STATE_DIR:-$PROJECT_DIR/.flatpak-builder/state}"

@@ -28,15 +28,15 @@ sudo dnf install ~/rpmbuild/RPMS/x86_64/gosh-authenticator-1.2.0-*.rpm
 
 The RPM installs:
 - Binary: `/usr/bin/gosh-authenticator`
-- Desktop entry: `/usr/share/applications/com.github.gosh.gosh_yubikey_manager.desktop`
-- Icon: `/usr/share/icons/hicolor/scalable/apps/com.github.gosh.gosh_yubikey_manager.svg`
-- AppStream metainfo: `/usr/share/metainfo/com.github.gosh.gosh_yubikey_manager.metainfo.xml`
+- Desktop entry: `/usr/share/applications/com.goshapps.YubicoAuthenticator.desktop`
+- Icon: `/usr/share/icons/hicolor/scalable/apps/com.goshapps.YubicoAuthenticator.svg`
+- AppStream metainfo: `/usr/share/metainfo/com.goshapps.YubicoAuthenticator.metainfo.xml`
 
 For a sandboxed install, prefer the Flatpak:
 
 ```bash
 ./build-flatpak.sh
-flatpak run com.github.gosh.gosh_yubikey_manager
+flatpak run com.goshapps.YubicoAuthenticator
 ```
 
 ## Dependencies

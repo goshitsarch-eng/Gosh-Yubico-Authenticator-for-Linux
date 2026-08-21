@@ -64,16 +64,16 @@ mkdir -p "$PKG_DIR/usr/share/icons/hicolor/128x128/apps"
 mkdir -p "$PKG_DIR/usr/share/metainfo"
 
 install -m 0755 "$BIN" "$PKG_DIR/usr/bin/gosh-authenticator"
-install -m 0644 "$PROJECT_DIR/data/applications/com.github.gosh.gosh_yubikey_manager.desktop" \
-  "$PKG_DIR/usr/share/applications/com.github.gosh.gosh_yubikey_manager.desktop"
-install -m 0644 "$PROJECT_DIR/data/icons/hicolor/scalable/apps/com.github.gosh.gosh_yubikey_manager.svg" \
-  "$PKG_DIR/usr/share/icons/hicolor/scalable/apps/com.github.gosh.gosh_yubikey_manager.svg"
-install -m 0644 "$PROJECT_DIR/data/icons/hicolor/64x64/apps/com.github.gosh.gosh_yubikey_manager.png" \
-  "$PKG_DIR/usr/share/icons/hicolor/64x64/apps/com.github.gosh.gosh_yubikey_manager.png"
-install -m 0644 "$PROJECT_DIR/data/icons/hicolor/128x128/apps/com.github.gosh.gosh_yubikey_manager.png" \
-  "$PKG_DIR/usr/share/icons/hicolor/128x128/apps/com.github.gosh.gosh_yubikey_manager.png"
-install -m 0644 "$PROJECT_DIR/data/metainfo/com.github.gosh.gosh_yubikey_manager.metainfo.xml" \
-  "$PKG_DIR/usr/share/metainfo/com.github.gosh.gosh_yubikey_manager.metainfo.xml"
+install -m 0644 "$PROJECT_DIR/data/applications/com.goshapps.YubicoAuthenticator.desktop" \
+  "$PKG_DIR/usr/share/applications/com.goshapps.YubicoAuthenticator.desktop"
+install -m 0644 "$PROJECT_DIR/data/icons/hicolor/scalable/apps/com.goshapps.YubicoAuthenticator.svg" \
+  "$PKG_DIR/usr/share/icons/hicolor/scalable/apps/com.goshapps.YubicoAuthenticator.svg"
+install -m 0644 "$PROJECT_DIR/data/icons/hicolor/64x64/apps/com.goshapps.YubicoAuthenticator.png" \
+  "$PKG_DIR/usr/share/icons/hicolor/64x64/apps/com.goshapps.YubicoAuthenticator.png"
+install -m 0644 "$PROJECT_DIR/data/icons/hicolor/128x128/apps/com.goshapps.YubicoAuthenticator.png" \
+  "$PKG_DIR/usr/share/icons/hicolor/128x128/apps/com.goshapps.YubicoAuthenticator.png"
+install -m 0644 "$PROJECT_DIR/data/metainfo/com.goshapps.YubicoAuthenticator.metainfo.xml" \
+  "$PKG_DIR/usr/share/metainfo/com.goshapps.YubicoAuthenticator.metainfo.xml"
 
 cat > "$PKG_DIR/DEBIAN/control" << EOF
 Package: ${NAME}

@@ -39,8 +39,8 @@ sudo systemctl enable --now pcscd
 
 ```bash
 # From a release bundle:
-flatpak install --user ./com.github.gosh.gosh_yubikey_manager.flatpak
-flatpak run com.github.gosh.gosh_yubikey_manager
+flatpak install --user ./com.goshapps.YubicoAuthenticator.flatpak
+flatpak run com.goshapps.YubicoAuthenticator
 
 # Or build and install from this repository:
 ./build-flatpak.sh
@@ -85,7 +85,7 @@ sudo apt install flatpak flatpak-builder elfutils librsvg2-common
 ```
 
 `./build-flatpak.sh` installs the GNOME 50 SDK and the `rust-stable` extension
-from Flathub, builds `com.github.gosh.gosh_yubikey_manager`, installs it for
+from Flathub, builds `com.goshapps.YubicoAuthenticator`, installs it for
 the current user, and writes a `.flatpak` bundle under `dist/`.
 
 If you change Rust dependencies, regenerate the offline crate sources:
