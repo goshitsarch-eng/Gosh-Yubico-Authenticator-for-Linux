@@ -3,6 +3,9 @@
 A native GTK 4 / Adwaita desktop application for managing OATH (TOTP/HOTP)
 credentials on YubiKey devices.
 
+Gosh Yubico Authenticator is an independent application and is not affiliated
+with or endorsed by Yubico. Yubico and YubiKey are trademarks of Yubico AB.
+
 ## Features
 
 Manage OATH credentials with TOTP/HOTP code generation, password-protected
@@ -11,7 +14,7 @@ system / light / dark theme support.
 
 ## Screenshots
 
-![Gosh YubiKey Manager – Credentials View](screenshots/img1.png)
+![Gosh Yubico Authenticator – Credentials View](screenshots/img1.png)
 
 ## Quick Start
 

@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 pub const APP_ID: &str = "com.goshapps.YubicoAuthenticator";
-pub const APP_NAME: &str = "Gosh Yubikey Manager";
+pub const APP_NAME: &str = "Gosh Yubico Authenticator";
 pub const APP_VERSION: &str = "1.2.0";
 pub const APP_DEVELOPER: &str = "Goshitsarch";
 pub const APP_WEBSITE: &str =
