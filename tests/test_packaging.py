@@ -46,3 +46,4 @@ def test_rust_notice_has_a_reproducible_generator() -> None:
     script = (ROOT / "scripts/generate-third-party-licenses.sh").read_text()
     assert "cargo-about --locked --features cli" in script
     assert "cargo about generate -o ../THIRD_PARTY_LICENSES.html about.hbs" in script
+    assert 'replace(b"\\r\\n", b"\\n")' in script
