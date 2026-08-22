@@ -3,12 +3,15 @@
   <id>com.goshapps.YubicoAuthenticator</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
-  <name>Gosh Yubikey Manager</name>
+  <name>Gosh Yubico Authenticator</name>
   <summary>Manage OATH credentials on YubiKey devices</summary>
   <description>
     <p>
-      Gosh Yubikey Manager is a native GTK 4 / Adwaita desktop application for
+      Gosh Yubico Authenticator is a native GTK 4 / Adwaita desktop application for
       managing OATH (TOTP and HOTP) credentials stored on YubiKey devices.
+    </p>
+    <p>
+      This independent application is not affiliated with or endorsed by Yubico.
     </p>
     <p>Features:</p>
     <ul>

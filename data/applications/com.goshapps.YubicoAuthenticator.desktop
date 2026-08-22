@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=Gosh Yubikey Manager
+Name=Gosh Yubico Authenticator
 Exec=gosh-authenticator
 Icon=com.goshapps.YubicoAuthenticator
 Terminal=false

@@ -109,7 +109,7 @@ pub fn build_ui(app: &adw::Application) {
         .tooltip_text("Menu")
         .build();
     let menu = gio::Menu::new();
-    menu.append(Some("About Gosh Yubikey Manager"), Some("win.about"));
+    menu.append(Some("About Gosh Yubico Authenticator"), Some("win.about"));
     menu.append(Some("Quit"), Some("window.close"));
     menu_button.set_menu_model(Some(&menu));
 
