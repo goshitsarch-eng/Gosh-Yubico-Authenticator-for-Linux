@@ -2,8 +2,6 @@ app-id: com.goshapps.YubicoAuthenticator
 runtime: org.gnome.Platform
 runtime-version: "50"
 sdk: org.gnome.Sdk
-sdk-extensions:
-  - org.freedesktop.Sdk.Extension.rust-stable
 command: gosh-authenticator
 finish-args:
   - --share=ipc
@@ -23,7 +21,6 @@ cleanup:
   - "*.la"
   - "*.a"
 build-options:
-  append-path: /usr/lib/sdk/rust-stable/bin
   env:
     CARGO_NET_OFFLINE: "true"
 modules:
@@ -38,6 +35,7 @@ modules:
       - rm -f /app/sbin/pcscd
       - rmdir /app/sbin || true
       - rm -f /app/share/metainfo/fr.apdu.pcsclite.metainfo.xml
+      - install -Dm644 ../COPYING /app/share/licenses/com.goshapps.YubicoAuthenticator/pcsc-lite-COPYING
     cleanup:
       - /lib/libpcscspy.so
       - /lib/libpcsclite.so
@@ -55,11 +53,13 @@ modules:
   - name: gosh-authenticator
     buildsystem: simple
     build-options:
+      append-path: /run/build/gosh-authenticator/rust-toolchain/bin
       env:
         CARGO_HOME: /run/build/gosh-authenticator/cargo
         CARGO_NET_OFFLINE: "true"
         PKG_CONFIG_PATH: /app/lib/pkgconfig:/app/lib64/pkgconfig:/app/share/pkgconfig
     build-commands:
+      - ./toolchain/install.sh --prefix=/run/build/gosh-authenticator/rust-toolchain --disable-ldconfig --without=rust-docs
       - rustc --version
       - cargo --offline build --locked --release --manifest-path rust/Cargo.toml --verbose
       - install -Dm755 rust/target/release/gosh-authenticator /app/bin/gosh-authenticator
@@ -69,7 +69,15 @@ modules:
       - install -Dm644 data/icons/hicolor/128x128/apps/com.goshapps.YubicoAuthenticator.png /app/share/icons/hicolor/128x128/apps/com.goshapps.YubicoAuthenticator.png
       - install -Dm644 data/metainfo/com.goshapps.YubicoAuthenticator.metainfo.xml /app/share/metainfo/com.goshapps.YubicoAuthenticator.metainfo.xml
       - install -Dm644 LICENSE /app/share/licenses/com.goshapps.YubicoAuthenticator/LICENSE
+      - install -Dm644 THIRD_PARTY_LICENSES.html /app/share/licenses/com.goshapps.YubicoAuthenticator/THIRD_PARTY_LICENSES.html
     sources:
+      - type: archive
+        url: https://static.rust-lang.org/dist/2026-08-20/rust-1.98.0-x86_64-unknown-linux-gnu.tar.xz
+        sha256: ed8ee2df70909c88cbaf87a6cfa3920dac00b537de12a6abe6906641e0f5952f
+        dest: toolchain
+        strip-components: 1
+        only-arches:
+          - x86_64
       - type: dir
         path: rust/src
         dest: rust/src
@@ -87,4 +95,7 @@ modules:
       - type: file
         path: LICENSE
         dest-filename: LICENSE
+      - type: file
+        path: THIRD_PARTY_LICENSES.html
+        dest-filename: THIRD_PARTY_LICENSES.html
       - flatpak/cargo-sources.json
