@@ -1,5 +1,5 @@
 Name:           gosh-authenticator
-Version:        1.2.0
+Version:        1.2.1
 Release:        1%{?dist}
 Summary:        Native GTK 4 app for managing OATH credentials on YubiKey devices
 License:        GPL-3.0-or-later
@@ -61,6 +61,10 @@ install -D -m 0644 data/metainfo/com.goshapps.YubicoAuthenticator.metainfo.xml \
 /usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &> /dev/null || :
 
 %changelog
+* Mon Aug 24 2026 Gosh OS <goshitsarch-eng@users.noreply.github.com> - 1.2.1-1
+- Fail closed when the OATH applet omits or malforms its device ID
+- Remove unnecessary Flatpak network and broad device permissions
+
 * Thu Aug 20 2026 Builder <builder@localhost> - 1.2.0-1
 - Rewrite as native GTK 4 / Adwaita application
 - Add Flatpak packaging (GNOME 50 runtime)
