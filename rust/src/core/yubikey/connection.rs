@@ -16,6 +16,13 @@ pub struct YubiKeyConnection {
     pub challenge_algorithm: Option<apdu::Algorithm>,
 }
 
+type SelectOathResponse = (
+    (u8, u8, u8),
+    [u8; 8],
+    Option<Vec<u8>>,
+    Option<apdu::Algorithm>,
+);
+
 impl YubiKeyConnection {
     /// Establish a connection to the first available YubiKey with OATH applet
     pub fn connect() -> Result<Self> {
@@ -70,19 +77,16 @@ impl YubiKeyConnection {
     }
 
     /// Select the OATH applet and parse the response
-    fn select_oath_applet(
-        card: &Card,
-    ) -> Result<(
-        (u8, u8, u8),
-        [u8; 8],
-        Option<Vec<u8>>,
-        Option<apdu::Algorithm>,
-    )> {
+    fn select_oath_applet(card: &Card) -> Result<SelectOathResponse> {
         let select_apdu = apdu::build_select_apdu();
         let mut recv_buf = [0u8; MAX_BUFFER_SIZE];
 
         let response = card.transmit(&select_apdu, &mut recv_buf)?;
 
+        Self::parse_select_response(response)
+    }
+
+    fn parse_select_response(response: &[u8]) -> Result<SelectOathResponse> {
         if response.len() < 2 {
             return Err(YubiKeyError::InvalidResponse("Response too short".into()));
         }
@@ -97,17 +101,33 @@ impl YubiKeyConnection {
         // Parse SELECT response
         let data = &response[..response.len() - 2];
         let mut version = (0u8, 0u8, 0u8);
-        let mut device_id = [0u8; 8];
+        let mut device_id = None;
         let mut challenge = None;
         let mut algo = None;
 
-        for tlv in TlvParser::new(data) {
+        let mut parser = TlvParser::new(data);
+        while let Some(tlv) = parser.next() {
             match Tag::from_byte(tlv.tag) {
                 Some(Tag::Version) if tlv.value.len() >= 3 => {
                     version = (tlv.value[0], tlv.value[1], tlv.value[2]);
                 }
-                Some(Tag::Name) if tlv.value.len() >= 8 => {
-                    device_id.copy_from_slice(&tlv.value[..8]);
+                Some(Tag::Name) if tlv.value.len() == 8 => {
+                    if device_id.is_some() {
+                        return Err(YubiKeyError::InvalidResponse(
+                            "SELECT response contains duplicate device IDs".into(),
+                        ));
+                    }
+                    let parsed_device_id = <[u8; 8]>::try_from(tlv.value).map_err(|_| {
+                        YubiKeyError::InvalidResponse(
+                            "SELECT response contains an invalid device ID length".into(),
+                        )
+                    })?;
+                    device_id = Some(parsed_device_id);
+                }
+                Some(Tag::Name) => {
+                    return Err(YubiKeyError::InvalidResponse(
+                        "SELECT response contains an invalid device ID length".into(),
+                    ));
                 }
                 Some(Tag::Challenge) => {
                     challenge = Some(tlv.value.to_vec());
@@ -118,6 +138,16 @@ impl YubiKeyConnection {
                 _ => {}
             }
         }
+
+        if !parser.is_empty() {
+            return Err(YubiKeyError::InvalidResponse(
+                "SELECT response contains malformed TLV data".into(),
+            ));
+        }
+
+        let device_id = device_id.ok_or_else(|| {
+            YubiKeyError::InvalidResponse("SELECT response is missing the device ID".into())
+        })?;
 
         Ok((version, device_id, challenge, algo))
     }
@@ -204,6 +234,70 @@ pub fn list_yubikey_readers() -> Result<Vec<String>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn successful_select_response(data: &[u8]) -> Vec<u8> {
+        let mut response = data.to_vec();
+        response.extend_from_slice(&[sw::SUCCESS.0, sw::SUCCESS.1]);
+        response
+    }
+
+    #[test]
+    fn select_response_requires_device_id() {
+        let response = successful_select_response(&[Tag::Version as u8, 3, 5, 7, 1]);
+
+        assert!(matches!(
+            YubiKeyConnection::parse_select_response(&response),
+            Err(YubiKeyError::InvalidResponse(message)) if message.contains("missing the device ID")
+        ));
+    }
+
+    #[test]
+    fn select_response_rejects_invalid_device_id_length() {
+        let response = successful_select_response(&[Tag::Name as u8, 7, 1, 2, 3, 4, 5, 6, 7]);
+
+        assert!(matches!(
+            YubiKeyConnection::parse_select_response(&response),
+            Err(YubiKeyError::InvalidResponse(message)) if message.contains("invalid device ID length")
+        ));
+    }
+
+    #[test]
+    fn select_response_rejects_malformed_tlv() {
+        let response = successful_select_response(&[Tag::Name as u8, 8, 1, 2, 3]);
+
+        assert!(matches!(
+            YubiKeyConnection::parse_select_response(&response),
+            Err(YubiKeyError::InvalidResponse(message)) if message.contains("malformed TLV")
+        ));
+    }
+
+    #[test]
+    fn select_response_accepts_exact_device_id() {
+        let response = successful_select_response(&[
+            Tag::Version as u8,
+            3,
+            5,
+            7,
+            1,
+            Tag::Name as u8,
+            8,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+        ]);
+
+        let (version, device_id, challenge, algorithm) =
+            YubiKeyConnection::parse_select_response(&response).unwrap();
+        assert_eq!(version, (5, 7, 1));
+        assert_eq!(device_id, [1, 2, 3, 4, 5, 6, 7, 8]);
+        assert!(challenge.is_none());
+        assert!(algorithm.is_none());
+    }
 
     #[test]
     #[ignore] // Requires actual YubiKey
