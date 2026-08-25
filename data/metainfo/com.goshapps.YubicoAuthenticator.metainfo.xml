@@ -52,6 +52,11 @@
     <color type="primary" scheme_preference="dark">#1c71d8</color>
   </branding>
   <releases>
+    <release version="1.2.1" date="2026-08-24">
+      <description>
+        <p>Fail closed on malformed OATH device identity data and tighten Flatpak permissions.</p>
+      </description>
+    </release>
     <release version="1.2.0" date="2026-08-20">
       <description>
         <p>Native GTK 4 / Adwaita rewrite with Flatpak packaging.</p>

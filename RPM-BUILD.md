@@ -21,7 +21,7 @@ This will:
 ## Installing the RPM
 
 ```bash
-sudo dnf install ~/rpmbuild/RPMS/x86_64/gosh-authenticator-1.2.0-*.rpm
+sudo dnf install ~/rpmbuild/RPMS/x86_64/gosh-authenticator-1.2.1-*.rpm
 ```
 
 ## Package Contents

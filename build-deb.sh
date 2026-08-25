@@ -11,7 +11,7 @@ if [ -z "$VERSION_INPUT" ] && command -v git >/dev/null 2>&1; then
   TAG="$(git -C "$PROJECT_DIR" describe --tags --abbrev=0 2>/dev/null || true)"
   VERSION_INPUT="${TAG#v}"
 fi
-VERSION_INPUT="${VERSION_INPUT:-1.2.0}"
+VERSION_INPUT="${VERSION_INPUT:-1.2.1}"
 
 ARCH_INPUT="${2:-${DEB_ARCH:-}}"
 if [ -z "$ARCH_INPUT" ]; then

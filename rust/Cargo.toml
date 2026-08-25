@@ -1,6 +1,6 @@
 [package]
 name = "gosh-authenticator"
-version = "1.2.0"
+version = "1.2.1"
 edition = "2021"
 authors = ["Goshitsarch"]
 description = "A native GTK 4 Adwaita desktop application for managing OATH credentials on YubiKey devices"

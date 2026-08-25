@@ -5,7 +5,7 @@ set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 NAME="gosh-authenticator"
-VERSION_DEFAULT="1.2.0"
+VERSION_DEFAULT="1.2.1"
 VERSION="${1:-${VERSION:-$VERSION_DEFAULT}}"
 TOPDIR="${RPMBUILD_TOPDIR:-$HOME/rpmbuild}"
 
