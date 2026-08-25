@@ -117,8 +117,11 @@ impl YubiKeyConnection {
                             "SELECT response contains duplicate device IDs".into(),
                         ));
                     }
-                    let mut parsed_device_id = [0u8; 8];
-                    parsed_device_id.copy_from_slice(tlv.value);
+                    let parsed_device_id = <[u8; 8]>::try_from(tlv.value).map_err(|_| {
+                        YubiKeyError::InvalidResponse(
+                            "SELECT response contains an invalid device ID length".into(),
+                        )
+                    })?;
                     device_id = Some(parsed_device_id);
                 }
                 Some(Tag::Name) => {
