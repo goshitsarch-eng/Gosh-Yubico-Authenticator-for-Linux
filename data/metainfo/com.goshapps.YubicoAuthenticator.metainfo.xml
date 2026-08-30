@@ -61,7 +61,7 @@
         <ul>
           <li>Native KDE look and feel with system, light, and dark color schemes</li>
           <li>QR images can now be opened directly from network shares</li>
-          <li>All GTK 4 / libadwaita code and dependencies removed</li>
+          <li>Previous UI toolkit code and dependencies fully removed</li>
         </ul>
       </description>
     </release>
@@ -72,7 +72,7 @@
     </release>
     <release version="1.2.0" date="2026-08-20">
       <description>
-        <p>Native GTK 4 / Adwaita rewrite with Flatpak packaging.</p>
+        <p>Native desktop rewrite with Flatpak packaging.</p>
       </description>
     </release>
   </releases>

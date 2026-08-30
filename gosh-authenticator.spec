@@ -60,12 +60,12 @@ optional forced light and dark modes.
 - Complete rewrite as a native Qt 6 / Kirigami (KDE Frameworks 6) application
 - Follow the system color scheme with forced light/dark modes via KColorScheme
 - Open QR images from network shares in-app through KIO
-- Drop all GTK 4 / libadwaita and Rust code and dependencies
+- Drop the previous UI toolkit and all of its code and dependencies
 
 * Mon Aug 24 2026 Gosh OS <goshitsarch-eng@users.noreply.github.com> - 1.2.1-1
 - Fail closed when the OATH applet omits or malforms its device ID
 - Remove unnecessary Flatpak network and broad device permissions
 
 * Thu Aug 20 2026 Builder <builder@localhost> - 1.2.0-1
-- Rewrite as native GTK 4 / Adwaita application
+- Rewrite as a native Linux desktop application
 - Add Flatpak packaging (GNOME 50 runtime)

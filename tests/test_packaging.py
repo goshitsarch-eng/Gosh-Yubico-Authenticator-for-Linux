@@ -42,17 +42,20 @@ def test_no_gtk_or_rust_leftovers() -> None:
     assert not (ROOT / "flatpak" / "cargo-sources.json").exists()
     for path in [
         ROOT / "README.md",
+        ROOT / "RELEASE.md",
+        ROOT / "RPM-BUILD.md",
         ROOT / "gosh-authenticator.spec",
+        ROOT / "build-rpm.sh",
+        ROOT / "build-deb.sh",
+        ROOT / "build-flatpak.sh",
         MANIFEST,
         ROOT / "data" / "metainfo" / "com.goshapps.YubicoAuthenticator.metainfo.xml",
+        ROOT / "data" / "applications" / "com.goshapps.YubicoAuthenticator.desktop",
     ]:
         text = path.read_text().lower()
-        # Historical release notes may mention the old stack; current
-        # instructions and dependencies must not.
-        head = text.split("%changelog")[0].split("<releases>")[0]
-        assert "gtk" not in head, path
-        assert "adwaita" not in head, path
-        assert "cargo" not in head, path
+        assert "gtk" not in text, path
+        assert "adwaita" not in text, path
+        assert "cargo" not in text, path
 
 
 def test_cmake_project_builds_the_qt_app() -> None:
