@@ -1,11 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
-# Build the Gosh Authenticator RPM package from the native GTK 4 sources.
+# Build the Gosh Authenticator RPM package from the Qt 6 / Kirigami sources.
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 NAME="gosh-authenticator"
-VERSION_DEFAULT="1.2.1"
+VERSION_DEFAULT="2.0.0"
 VERSION="${1:-${VERSION:-$VERSION_DEFAULT}}"
 TOPDIR="${RPMBUILD_TOPDIR:-$HOME/rpmbuild}"
 
@@ -18,8 +18,8 @@ if ! command -v rpmbuild >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! command -v cargo >/dev/null 2>&1; then
-  echo "ERROR: cargo not found. Install Rust from https://rustup.rs/" >&2
+if ! command -v cmake >/dev/null 2>&1; then
+  echo "ERROR: cmake not found. Install with: sudo dnf install cmake" >&2
   exit 1
 fi
 
@@ -31,8 +31,9 @@ TEMP_DIR=$(mktemp -d)
 cp -r "$PROJECT_DIR" "$TEMP_DIR/${NAME}-${VERSION}"
 cd "$TEMP_DIR"
 tar --exclude='.git' \
-    --exclude='rust/target' \
+    --exclude='build' \
     --exclude='dist' \
+    --exclude='.flatpak-builder' \
     --exclude='*.swp' \
     --exclude='*.kate-swp' \
     -czf "$TOPDIR/SOURCES/${NAME}-${VERSION}.tar.gz" \
@@ -44,7 +45,7 @@ sed -E "s/^Version:[[:space:]]+.*/Version:        ${VERSION}/" \
   "$PROJECT_DIR/${NAME}.spec" > "$TOPDIR/SPECS/${NAME}.spec"
 
 echo "Building RPM package..."
-rpmbuild -bb --nodeps \
+rpmbuild -bb \
   --define "_topdir $TOPDIR" \
   "$TOPDIR/SPECS/${NAME}.spec"
 

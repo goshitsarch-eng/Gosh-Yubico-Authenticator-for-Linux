@@ -1,7 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
-# Build the Gosh Authenticator DEB package from the native GTK 4 binary.
+# Build the Gosh Authenticator DEB package from the Qt 6 / Kirigami binary.
+#
+# Requires a distribution with KDE Frameworks 6 (Debian 13 "trixie",
+# Ubuntu 24.10+). Build the binary first:
+#   cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 NAME="gosh-authenticator"
@@ -11,7 +15,7 @@ if [ -z "$VERSION_INPUT" ] && command -v git >/dev/null 2>&1; then
   TAG="$(git -C "$PROJECT_DIR" describe --tags --abbrev=0 2>/dev/null || true)"
   VERSION_INPUT="${TAG#v}"
 fi
-VERSION_INPUT="${VERSION_INPUT:-1.2.1}"
+VERSION_INPUT="${VERSION_INPUT:-2.0.0}"
 
 ARCH_INPUT="${2:-${DEB_ARCH:-}}"
 if [ -z "$ARCH_INPUT" ]; then
@@ -36,10 +40,10 @@ if ! command -v dpkg-deb >/dev/null 2>&1; then
   exit 1
 fi
 
-BIN="$PROJECT_DIR/rust/target/release/gosh-authenticator"
+BIN="$PROJECT_DIR/build/gosh-authenticator"
 if [ ! -x "$BIN" ]; then
-  echo "ERROR: native binary not found at: $BIN" >&2
-  echo "Build it first: (cd rust && cargo build --release)" >&2
+  echo "ERROR: binary not found at: $BIN" >&2
+  echo "Build it first: cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build" >&2
   exit 1
 fi
 
@@ -82,10 +86,10 @@ Section: utils
 Priority: optional
 Architecture: ${ARCH_INPUT}
 Maintainer: Builder <builder@localhost>
-Depends: libgtk-4-1, libadwaita-1-0, libpcsclite1
+Depends: libpcsclite1, qml6-module-org-kde-kirigami, qml6-module-org-kde-desktop, qml6-module-qtquick-controls, qml6-module-qtquick-layouts, qml6-module-qtquick-dialogs, qml6-module-qtqml-workerscript, libqt6svg6
 Description: Desktop app for managing OATH credentials on YubiKey
- Gosh Authenticator is a native GTK 4 / Adwaita Linux desktop application
- for managing OATH (TOTP/HOTP) credentials on YubiKey devices.
+ Gosh Yubico Authenticator is a native Qt 6 / Kirigami Linux desktop
+ application for managing OATH (TOTP/HOTP) credentials on YubiKey devices.
 EOF
 chmod 0644 "$PKG_DIR/DEBIAN/control"
 
@@ -94,9 +98,6 @@ cat > "$PKG_DIR/DEBIAN/postinst" << 'EOF'
 set -e
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database >/dev/null 2>&1 || true
-fi
-if command -v gtk-update-icon-cache >/dev/null 2>&1; then
-  gtk-update-icon-cache -f /usr/share/icons/hicolor >/dev/null 2>&1 || true
 fi
 exit 0
 EOF
@@ -107,9 +108,6 @@ cat > "$PKG_DIR/DEBIAN/postrm" << 'EOF'
 set -e
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database >/dev/null 2>&1 || true
-fi
-if command -v gtk-update-icon-cache >/dev/null 2>&1; then
-  gtk-update-icon-cache -f /usr/share/icons/hicolor >/dev/null 2>&1 || true
 fi
 exit 0
 EOF

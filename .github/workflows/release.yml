@@ -8,23 +8,69 @@ on:
 permissions:
   contents: read
 
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
-  build-packages:
-    name: Build ${{ matrix.arch }} packages
+  build-rpm:
+    name: Build ${{ matrix.arch }} RPM
     runs-on: ${{ matrix.runner }}
+    container:
+      image: fedora:43
     strategy:
       matrix:
         include:
           - arch: x64
             runner: ubuntu-24.04
             rpm_arch: x86_64
-            deb_arch: amd64
           - arch: arm64
             runner: ubuntu-24.04-arm
             rpm_arch: aarch64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        run: |
+          dnf install -y \
+            cmake gcc-c++ make rpm-build rpmdevtools \
+            qt6-qtbase-devel qt6-qtdeclarative-devel \
+            kf6-kcolorscheme-devel kf6-kio-devel \
+            zxing-cpp-devel pcsc-lite-devel
+
+      - name: Build RPM
+        run: |
+          RPMBUILD_TOPDIR="${{ github.workspace }}/rpmbuild" \
+            ./build-rpm.sh "${{ steps.version.outputs.VERSION }}"
+
+      - name: Prepare artifacts
+        run: |
+          mkdir -p release-rpm-${{ matrix.arch }}
+          cp rpmbuild/RPMS/${{ matrix.rpm_arch }}/*.rpm "release-rpm-${{ matrix.arch }}/"
+          ls -lh release-rpm-${{ matrix.arch }}/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-rpm-${{ matrix.arch }}
+          path: release-rpm-${{ matrix.arch }}/*
+          retention-days: 1
+
+  build-deb:
+    name: Build ${{ matrix.arch }} DEB and tarball
+    runs-on: ${{ matrix.runner }}
+    container:
+      image: debian:trixie
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-24.04
+            deb_arch: amd64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
             deb_arch: arm64
 
     steps:
@@ -37,29 +83,18 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            curl git \
-            gcc pkg-config \
-            libgtk-4-dev libadwaita-1-dev libpcsclite-dev \
-            rpm dpkg-dev
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Prepare output dirs
-        run: |
-          mkdir -p dist rpmbuild
+          apt-get update
+          apt-get install -y \
+            cmake g++ ninja-build git dpkg-dev \
+            qt6-base-dev qt6-declarative-dev \
+            libkf6colorscheme-dev libkf6kio-dev \
+            libzxing-dev libpcsclite-dev
 
       - name: Build native app
         run: |
-          cd rust
-          cargo build --release
-
-      - name: Build RPM
-        run: |
-          RPMBUILD_TOPDIR="${{ github.workspace }}/rpmbuild" \
-            ./build-rpm.sh "${{ steps.version.outputs.VERSION }}"
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+          cmake --build build
+          ctest --test-dir build --output-on-failure
 
       - name: Build DEB
         run: ./build-deb.sh "${{ steps.version.outputs.VERSION }}" "${{ matrix.deb_arch }}"
@@ -68,34 +103,34 @@ jobs:
         run: |
           TARBALL_NAME="gosh-authenticator-${{ steps.version.outputs.VERSION }}-linux-${{ matrix.arch }}"
           mkdir -p "/tmp/${TARBALL_NAME}"
-          cp rust/target/release/gosh-authenticator "/tmp/${TARBALL_NAME}/"
+          cp build/gosh-authenticator "/tmp/${TARBALL_NAME}/"
           cp data/applications/com.goshapps.YubicoAuthenticator.desktop "/tmp/${TARBALL_NAME}/"
           cp icon.svg "/tmp/${TARBALL_NAME}/"
           cp README.md "/tmp/${TARBALL_NAME}/"
           cd /tmp
           tar -czf "${TARBALL_NAME}.tar.gz" "${TARBALL_NAME}"
-          mv "${TARBALL_NAME}.tar.gz" "${{ github.workspace }}/dist/"
+          mkdir -p "${GITHUB_WORKSPACE}/dist"
+          mv "${TARBALL_NAME}.tar.gz" "${GITHUB_WORKSPACE}/dist/"
 
       - name: Prepare artifacts
         run: |
-          mkdir -p release-${{ matrix.arch }}
-          cp rpmbuild/RPMS/${{ matrix.rpm_arch }}/*.rpm "release-${{ matrix.arch }}/" || true
-          cp dist/*_${{ matrix.deb_arch }}.deb "release-${{ matrix.arch }}/"
-          cp dist/*-${{ matrix.arch }}.tar.gz "release-${{ matrix.arch }}/"
-          ls -lh release-${{ matrix.arch }}/
+          mkdir -p release-deb-${{ matrix.arch }}
+          cp dist/*_${{ matrix.deb_arch }}.deb "release-deb-${{ matrix.arch }}/"
+          cp dist/*-${{ matrix.arch }}.tar.gz "release-deb-${{ matrix.arch }}/"
+          ls -lh release-deb-${{ matrix.arch }}/
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: packages-${{ matrix.arch }}
-          path: release-${{ matrix.arch }}/*
+          name: packages-deb-${{ matrix.arch }}
+          path: release-deb-${{ matrix.arch }}/*
           retention-days: 1
 
   build-flatpak:
     name: Build Flatpak (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
     container:
-      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-50
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.9
       options: --privileged
     strategy:
       matrix:
@@ -108,9 +143,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check cargo-sources.json
-        run: python3 flatpak/generate-cargo-sources.py --check
-
       - name: Build Flatpak
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
@@ -122,9 +154,10 @@ jobs:
   create-release:
     name: Create GitHub Release
     needs:
-      - build-packages
+      - build-rpm
+      - build-deb
       - build-flatpak
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
 
@@ -152,9 +185,9 @@ jobs:
         with:
           name: Release ${{ steps.version.outputs.VERSION }}
           body: |
-            ## Gosh Authenticator v${{ steps.version.outputs.VERSION }}
+            ## Gosh Yubico Authenticator v${{ steps.version.outputs.VERSION }}
 
-            Native GTK 4 / Adwaita desktop application for managing OATH credentials on YubiKey devices.
+            Native Qt 6 / Kirigami desktop application for managing OATH credentials on YubiKey devices.
 
             ### Downloads
 
@@ -178,9 +211,9 @@ jobs:
 
             **RPM:** `sudo dnf install gosh-authenticator-*.rpm`
 
-            **DEB:** `sudo apt install ./gosh-authenticator_*.deb`
+            **DEB:** `sudo apt install ./gosh-authenticator_*.deb` (needs KDE Frameworks 6: Debian 13+, Ubuntu 24.10+)
 
-            **Tarball:** Extract and run `./gosh-authenticator`
+            **Tarball:** Extract and run `./gosh-authenticator` (needs Qt 6 and Kirigami installed)
 
             See [README](https://github.com/${{ github.repository }}/blob/main/README.md) for full installation instructions.
 

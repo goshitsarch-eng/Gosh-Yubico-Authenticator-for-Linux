@@ -42,9 +42,8 @@ For each release, the workflow builds:
 ### Manual Build
 
 ```bash
-cd rust
-cargo build --release
-cd ..
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
 ./build-flatpak.sh
 ./build-rpm.sh
 ./build-deb.sh

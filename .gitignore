@@ -1,16 +1,9 @@
 # Build artifacts
-/build
-**/target/
+/build/
+/dist/
 **/*.o
-**/*.obj
 **/*.a
 **/*.so
-**/*.dylib
-**/*.dll
-**/*.exe
-
-# Rust
-rust/target/
 
 # IDE
 /.vscode
@@ -24,3 +17,7 @@ rust/target/
 .flatpak-builder/
 repo/
 *.flatpak
+
+# Python
+.pytest_cache/
+__pycache__/

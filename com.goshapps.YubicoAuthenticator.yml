@@ -1,7 +1,7 @@
 app-id: com.goshapps.YubicoAuthenticator
-runtime: org.gnome.Platform
-runtime-version: "50"
-sdk: org.gnome.Sdk
+runtime: org.kde.Platform
+runtime-version: "6.9"
+sdk: org.kde.Sdk
 command: gosh-authenticator
 finish-args:
   - --share=ipc
@@ -13,14 +13,12 @@ finish-args:
 cleanup:
   - /bin/pcsc-spy
   - /include
+  - /lib/cmake
   - /lib/pkgconfig
   - /share/doc
   - /share/man
   - "*.la"
   - "*.a"
-build-options:
-  env:
-    CARGO_NET_OFFLINE: "true"
 modules:
   - name: pcsc-lite
     buildsystem: meson
@@ -36,9 +34,7 @@ modules:
       - install -Dm644 ../COPYING /app/share/licenses/com.goshapps.YubicoAuthenticator/pcsc-lite-COPYING
     cleanup:
       - /lib/libpcscspy.so
-      - /lib/libpcsclite.so
       - /lib64/libpcscspy.so
-      - /lib64/libpcsclite.so
     sources:
       - type: archive
         url: https://pcsclite.apdu.fr/files/pcsc-lite-2.5.1.tar.xz
@@ -48,52 +44,37 @@ modules:
           project-id: 2611
           url-template: https://pcsclite.apdu.fr/files/pcsc-lite-$version.tar.xz
 
-  - name: gosh-authenticator
-    buildsystem: simple
-    build-options:
-      append-path: /run/build/gosh-authenticator/rust-toolchain/bin
-      env:
-        CARGO_HOME: /run/build/gosh-authenticator/cargo
-        CARGO_NET_OFFLINE: "true"
-        PKG_CONFIG_PATH: /app/lib/pkgconfig:/app/lib64/pkgconfig:/app/share/pkgconfig
-    build-commands:
-      - ./toolchain/install.sh --prefix=/run/build/gosh-authenticator/rust-toolchain --disable-ldconfig --without=rust-docs
-      - rustc --version
-      - cargo --offline build --locked --release --manifest-path rust/Cargo.toml --verbose
-      - install -Dm755 rust/target/release/gosh-authenticator /app/bin/gosh-authenticator
-      - install -Dm644 data/applications/com.goshapps.YubicoAuthenticator.desktop /app/share/applications/com.goshapps.YubicoAuthenticator.desktop
-      - install -Dm644 data/icons/hicolor/scalable/apps/com.goshapps.YubicoAuthenticator.svg /app/share/icons/hicolor/scalable/apps/com.goshapps.YubicoAuthenticator.svg
-      - install -Dm644 data/icons/hicolor/64x64/apps/com.goshapps.YubicoAuthenticator.png /app/share/icons/hicolor/64x64/apps/com.goshapps.YubicoAuthenticator.png
-      - install -Dm644 data/icons/hicolor/128x128/apps/com.goshapps.YubicoAuthenticator.png /app/share/icons/hicolor/128x128/apps/com.goshapps.YubicoAuthenticator.png
-      - install -Dm644 data/metainfo/com.goshapps.YubicoAuthenticator.metainfo.xml /app/share/metainfo/com.goshapps.YubicoAuthenticator.metainfo.xml
-      - install -Dm644 LICENSE /app/share/licenses/com.goshapps.YubicoAuthenticator/LICENSE
-      - install -Dm644 THIRD_PARTY_LICENSES.html /app/share/licenses/com.goshapps.YubicoAuthenticator/THIRD_PARTY_LICENSES.html
+  - name: zxing-cpp
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DZXING_EXAMPLES=OFF
+      - -DZXING_BLACKBOX_TESTS=OFF
+      - -DZXING_UNIT_TESTS=OFF
+      - -DZXING_WRITERS=OFF
+    post-install:
+      - install -Dm644 LICENSE /app/share/licenses/com.goshapps.YubicoAuthenticator/zxing-cpp-LICENSE
     sources:
       - type: archive
-        url: https://static.rust-lang.org/dist/2026-08-20/rust-1.98.0-x86_64-unknown-linux-gnu.tar.xz
-        sha256: ed8ee2df70909c88cbaf87a6cfa3920dac00b537de12a6abe6906641e0f5952f
-        dest: toolchain
-        strip-components: 1
-        only-arches:
-          - x86_64
+        url: https://github.com/zxing-cpp/zxing-cpp/archive/refs/tags/v2.3.0.tar.gz
+        sha256: b3e03aaaff81d68730d67392a135ac3fdfdf022880c66632ab188d2fe084cda3
+        x-checker-data:
+          type: anitya
+          project-id: 242143
+          url-template: https://github.com/zxing-cpp/zxing-cpp/archive/refs/tags/v$version.tar.gz
+
+  - name: gosh-authenticator
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DBUILD_TESTING=OFF
+    post-install:
+      - install -Dm644 LICENSE /app/share/licenses/com.goshapps.YubicoAuthenticator/LICENSE
+    sources:
       - type: dir
-        path: rust/src
-        dest: rust/src
-      - type: file
-        path: rust/Cargo.toml
-        dest: rust
-        dest-filename: Cargo.toml
-      - type: file
-        path: rust/Cargo.lock
-        dest: rust
-        dest-filename: Cargo.lock
-      - type: dir
-        path: data
-        dest: data
-      - type: file
-        path: LICENSE
-        dest-filename: LICENSE
-      - type: file
-        path: THIRD_PARTY_LICENSES.html
-        dest-filename: THIRD_PARTY_LICENSES.html
-      - flatpak/cargo-sources.json
+        path: .
+        skip:
+          - .git
+          - .flatpak-builder
+          - build
+          - dist
