@@ -35,8 +35,8 @@ case "$ARCH_INPUT" in
     ;;
 esac
 
-if ! command -v dpkg-deb >/dev/null 2>&1; then
-  echo "ERROR: dpkg-deb not found. Install with: sudo apt-get install dpkg-dev" >&2
+if ! command -v dpkg-deb >/dev/null 2>&1 || ! command -v dpkg-shlibdeps >/dev/null 2>&1; then
+  echo "ERROR: dpkg-deb/dpkg-shlibdeps not found. Install with: sudo apt-get install dpkg-dev" >&2
   exit 1
 fi
 
@@ -79,6 +79,22 @@ install -m 0644 "$PROJECT_DIR/data/icons/hicolor/128x128/apps/com.goshapps.Yubic
 install -m 0644 "$PROJECT_DIR/data/metainfo/com.goshapps.YubicoAuthenticator.metainfo.xml" \
   "$PKG_DIR/usr/share/metainfo/com.goshapps.YubicoAuthenticator.metainfo.xml"
 
+# Shared-library dependencies (Qt, KF6, ZXing, pcsclite, ...) are computed
+# from the linked binary with dpkg-shlibdeps; dpkg-deb does not do this on
+# its own. QML modules and plugins are loaded at runtime, so they are not
+# visible to the linker and must stay listed explicitly.
+SHLIBDEPS_DIR="$(mktemp -d)"
+mkdir -p "$SHLIBDEPS_DIR/debian"
+touch "$SHLIBDEPS_DIR/debian/control"
+SHLIB_DEPS="$(cd "$SHLIBDEPS_DIR" && dpkg-shlibdeps -O "$BIN" | sed -n 's/^shlibs:Depends=//p')"
+rm -rf "$SHLIBDEPS_DIR"
+if [ -z "$SHLIB_DEPS" ]; then
+  echo "ERROR: dpkg-shlibdeps produced no dependencies for $BIN" >&2
+  exit 1
+fi
+
+QML_DEPS="qml6-module-org-kde-kirigami, qml6-module-org-kde-desktop, qml6-module-qtquick-controls, qml6-module-qtquick-layouts, qml6-module-qtquick-dialogs, qml6-module-qtqml-workerscript, libqt6svg6"
+
 cat > "$PKG_DIR/DEBIAN/control" << EOF
 Package: ${NAME}
 Version: ${VERSION_INPUT}
@@ -86,7 +102,7 @@ Section: utils
 Priority: optional
 Architecture: ${ARCH_INPUT}
 Maintainer: Builder <builder@localhost>
-Depends: libpcsclite1, qml6-module-org-kde-kirigami, qml6-module-org-kde-desktop, qml6-module-qtquick-controls, qml6-module-qtquick-layouts, qml6-module-qtquick-dialogs, qml6-module-qtqml-workerscript, libqt6svg6
+Depends: ${SHLIB_DEPS}, ${QML_DEPS}
 Description: Desktop app for managing OATH credentials on YubiKey
  Gosh Yubico Authenticator is a native Qt 6 / Kirigami Linux desktop
  application for managing OATH (TOTP/HOTP) credentials on YubiKey devices.
