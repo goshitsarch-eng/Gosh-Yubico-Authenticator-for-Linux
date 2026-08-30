@@ -10,15 +10,38 @@ permissions:
   contents: read
 
 jobs:
-  flatpak-metadata:
-    name: Flatpak metadata
+  build-and-test:
+    name: Build and test (Qt 6 / KF6)
     runs-on: ubuntu-24.04
+    container:
+      image: fedora:latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check cargo-sources.json
-        run: python3 flatpak/generate-cargo-sources.py --check
+      - name: Install build dependencies
+        run: |
+          dnf install -y \
+            cmake gcc-c++ ninja-build \
+            qt6-qtbase-devel qt6-qtdeclarative-devel \
+            kf6-kcolorscheme-devel kf6-kio-devel \
+            zxing-cpp-devel pcsc-lite-devel
+
+      - name: Configure
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Run unit tests
+        run: ctest --test-dir build --output-on-failure
+
+  metadata:
+    name: Metadata and packaging checks
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Validate AppStream metainfo
         run: |
@@ -26,3 +49,8 @@ jobs:
           sudo apt-get install -y appstream
           appstreamcli validate --no-net --explain \
             data/metainfo/com.goshapps.YubicoAuthenticator.metainfo.xml
+
+      - name: Run packaging tests
+        run: |
+          sudo apt-get install -y python3-pytest
+          python3 -m pytest tests/test_packaging.py -v

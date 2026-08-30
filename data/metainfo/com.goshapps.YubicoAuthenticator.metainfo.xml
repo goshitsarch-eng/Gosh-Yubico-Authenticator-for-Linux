@@ -7,8 +7,10 @@
   <summary>Manage OATH credentials on YubiKey devices</summary>
   <description>
     <p>
-      Gosh Yubico Authenticator is a native GTK 4 / Adwaita desktop application for
-      managing OATH (TOTP and HOTP) credentials stored on YubiKey devices.
+      Gosh Yubico Authenticator is a native Qt 6 / Kirigami desktop application for
+      managing OATH (TOTP and HOTP) credentials stored on YubiKey devices. It is
+      built with KDE Frameworks 6 and integrates naturally with Plasma and other
+      desktops.
     </p>
     <p>
       This independent application is not affiliated with or endorsed by Yubico.
@@ -16,10 +18,11 @@
     <p>Features:</p>
     <ul>
       <li>Generate TOTP and HOTP codes from credentials on the key</li>
-      <li>Add credentials from a secret or by scanning a QR image</li>
-      <li>Protect the key with an OATH PIN and require touch when needed</li>
+      <li>Add credentials from a secret, an otpauth link, or by scanning a QR image</li>
+      <li>Open QR images straight from network shares</li>
+      <li>Protect the key with an OATH password and require touch when needed</li>
       <li>Copy codes to the clipboard with automatic clearing</li>
-      <li>Follow the system theme, or force light or dark</li>
+      <li>Follow the system color scheme, or force light or dark</li>
     </ul>
     <p>
       The Flatpak talks to the host PC/SC daemon. Install and start pcscd on
@@ -48,10 +51,20 @@
     <category>System</category>
   </categories>
   <branding>
-    <color type="primary" scheme_preference="light">#3584e4</color>
-    <color type="primary" scheme_preference="dark">#1c71d8</color>
+    <color type="primary" scheme_preference="light">#3daee9</color>
+    <color type="primary" scheme_preference="dark">#1d99f3</color>
   </branding>
   <releases>
+    <release version="2.0.0" date="2026-08-30">
+      <description>
+        <p>Complete rewrite as a native Qt 6 / Kirigami (KDE Frameworks 6) application.</p>
+        <ul>
+          <li>Native KDE look and feel with system, light, and dark color schemes</li>
+          <li>QR images can now be opened directly from network shares</li>
+          <li>Previous UI toolkit code and dependencies fully removed</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.2.1" date="2026-08-24">
       <description>
         <p>Fail closed on malformed OATH device identity data and tighten Flatpak permissions.</p>
@@ -59,7 +72,7 @@
     </release>
     <release version="1.2.0" date="2026-08-20">
       <description>
-        <p>Native GTK 4 / Adwaita rewrite with Flatpak packaging.</p>
+        <p>Native desktop rewrite with Flatpak packaging.</p>
       </description>
     </release>
   </releases>

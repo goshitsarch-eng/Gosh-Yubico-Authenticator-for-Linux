@@ -3,8 +3,10 @@
 ## Prerequisites
 
 ```bash
-sudo dnf install rpm-build rpmdevtools gcc pkgconf-pkg-config \
-                 gtk4-devel libadwaita-devel pcsc-lite-devel rust cargo
+sudo dnf install rpm-build rpmdevtools cmake gcc-c++ \
+                 qt6-qtbase-devel qt6-qtdeclarative-devel \
+                 kf6-kcolorscheme-devel kf6-kio-devel \
+                 zxing-cpp-devel pcsc-lite-devel
 ```
 
 ## Building the RPM
@@ -16,12 +18,12 @@ sudo dnf install rpm-build rpmdevtools gcc pkgconf-pkg-config \
 This will:
 1. Create the RPM build environment in `~/rpmbuild`
 2. Create a source tarball
-3. Build the RPM package
+3. Build the RPM package (including running the unit tests)
 
 ## Installing the RPM
 
 ```bash
-sudo dnf install ~/rpmbuild/RPMS/x86_64/gosh-authenticator-1.2.1-*.rpm
+sudo dnf install ~/rpmbuild/RPMS/x86_64/gosh-authenticator-2.0.0-*.rpm
 ```
 
 ## Package Contents
@@ -43,5 +45,6 @@ flatpak run com.goshapps.YubicoAuthenticator
 
 Runtime dependencies:
 - pcsc-lite (for smart card access)
-- gtk4
-- libadwaita
+- Qt 6 (base, declarative)
+- KDE Frameworks 6: Kirigami, qqc2-desktop-style, KColorScheme, KIO
+- zxing-cpp (QR decoding)
