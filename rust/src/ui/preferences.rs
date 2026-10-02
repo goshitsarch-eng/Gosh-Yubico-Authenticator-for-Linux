@@ -35,9 +35,9 @@ pub fn Preferences() -> Element {
                         };
                         theme_ui.send(Command::UpdateSettings(s));
                     },
-                    option { value: "system", "Follow System" }
-                    option { value: "light", "Light" }
-                    option { value: "dark", "Dark" }
+                    option { value: "system", selected: settings.theme_mode == ThemeMode::System, "Follow System" }
+                    option { value: "light", selected: settings.theme_mode == ThemeMode::Light, "Light" }
+                    option { value: "dark", selected: settings.theme_mode == ThemeMode::Dark, "Dark" }
                 }
             }
         }
@@ -62,7 +62,7 @@ pub fn Preferences() -> Element {
                         }
                     },
                     for seconds in [10, 20, 30, 60, 120] {
-                        option { value: "{seconds}", "{seconds} seconds" }
+                        option { value: "{seconds}", selected: settings.clipboard_timeout_seconds == seconds, "{seconds} seconds" }
                     }
                 }
             }

@@ -9,6 +9,27 @@ use gosh_authenticator_core::{
 #[component]
 pub fn Credentials() -> Element {
     let ui = use_context::<Ui>();
+    let mut search_mounted = use_signal(|| false);
+    use_effect(move || {
+        if (ui.focus_search)() && search_mounted() {
+            let mut focus_search = ui.focus_search;
+            focus_search.set(false);
+            spawn(async move {
+                let _ = dioxus_desktop::window().webview.focus();
+                // Desktop 0.7.3's MountedData::set_focus expects a boolean,
+                // but its interpreter returns undefined after focusing.
+                // Wait for mounting, then explicitly verify the active element.
+                match document::eval("const input=document.getElementById('search'); input?.focus(); return !!input && document.activeElement === input;")
+                    .join::<bool>()
+                    .await
+                {
+                    Ok(true) => {}
+                    Ok(false) => ui.error("Could not focus search: the field is unavailable".into()),
+                    Err(error) => ui.error(format!("Could not focus search: {error}")),
+                }
+            });
+        }
+    });
     let mut state = ui.state;
     let connection = state.read().connection;
     let filtered = state.read().filtered();
@@ -23,6 +44,7 @@ pub fn Credentials() -> Element {
                 placeholder: "Search accounts or services…",
                 "aria-label": "Search credentials",
                 value: state.read().search.clone(),
+                onmounted: move |_| search_mounted.set(true),
                 oninput: move |e| state.write().search = e.value(),
             }
         }

@@ -52,7 +52,8 @@ impl OathSession {
             .challenge()
             .ok_or(YubiKeyError::AuthenticationRequired)?;
         let key = derive_key(password, &self.device_id());
-        let response = hmac_bytes(&key, challenge)?;
+        let algorithm = self.connection.challenge_algorithm();
+        let response = hmac_bytes(&key, challenge, algorithm)?;
         let mut ours = [0; 8];
         getrandom::getrandom(&mut ours)
             .map_err(|_| YubiKeyError::Generic("Secure random generation failed".into()))?;
@@ -68,12 +69,21 @@ impl OathSession {
             .iter()
             .find(|t| t.tag == Tag::Response as u8)
             .ok_or_else(|| invalid("Missing mutual-authentication proof"))?;
-        let mut verifier = Hmac::<Sha1>::new_from_slice(&key)
-            .map_err(|_| invalid("Invalid authentication key"))?;
-        verifier.update(&ours);
-        verifier
-            .verify_slice(proof.value)
-            .map_err(|_| YubiKeyError::WrongPassword)?;
+        macro_rules! verify {
+            ($digest:ty) => {{
+                let mut verifier = Hmac::<$digest>::new_from_slice(&key)
+                    .map_err(|_| invalid("Invalid authentication key"))?;
+                verifier.update(&ours);
+                verifier
+                    .verify_slice(proof.value)
+                    .map_err(|_| YubiKeyError::WrongPassword)?;
+            }};
+        }
+        match algorithm {
+            Algorithm::Sha1 => verify!(Sha1),
+            Algorithm::Sha256 => verify!(Sha256),
+            Algorithm::Sha512 => verify!(Sha512),
+        }
         self.authenticated = true;
         Ok(())
     }
@@ -212,7 +222,7 @@ impl OathSession {
             let mut nonce = [0; 8];
             getrandom::getrandom(&mut nonce)
                 .map_err(|_| invalid("Secure random generation failed"))?;
-            apdu::build_set_code_apdu(&key, &nonce, &hmac_bytes(&key, &nonce)?)
+            apdu::build_set_code_apdu(&key, &nonce, &hmac_bytes(&key, &nonce, Algorithm::Sha1)?)
         };
         let command = Zeroizing::new(command);
         let raw = self.connection.transmit(&command)?;
@@ -280,10 +290,20 @@ fn derive_key(password: &str, salt: &[u8]) -> Zeroizing<Vec<u8>> {
     pbkdf2::pbkdf2_hmac::<Sha1>(password.as_bytes(), salt, 1000, &mut key);
     key
 }
-fn hmac_bytes(key: &[u8], data: &[u8]) -> Result<Vec<u8>> {
-    let mut mac = Hmac::<Sha1>::new_from_slice(key).map_err(|_| invalid("Invalid HMAC key"))?;
-    mac.update(data);
-    Ok(mac.finalize().into_bytes().to_vec())
+fn hmac_bytes(key: &[u8], data: &[u8], algorithm: Algorithm) -> Result<Vec<u8>> {
+    macro_rules! calculate {
+        ($digest:ty) => {{
+            let mut mac =
+                Hmac::<$digest>::new_from_slice(key).map_err(|_| invalid("Invalid HMAC key"))?;
+            mac.update(data);
+            Ok(mac.finalize().into_bytes().to_vec())
+        }};
+    }
+    match algorithm {
+        Algorithm::Sha1 => calculate!(Sha1),
+        Algorithm::Sha256 => calculate!(Sha256),
+        Algorithm::Sha512 => calculate!(Sha512),
+    }
 }
 fn prepare_secret(secret: &[u8], algo: Algorithm) -> Zeroizing<Vec<u8>> {
     let block = if algo == Algorithm::Sha512 { 128 } else { 64 };

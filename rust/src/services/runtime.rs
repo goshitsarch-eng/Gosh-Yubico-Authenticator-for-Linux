@@ -151,12 +151,15 @@ impl Worker {
             .as_ref()
             .is_some_and(|s| !matches!(s.is_present(), Ok(true)))
         {
-            self.session = None;
-            self.credentials.clear();
-            self.emit(Event::Disconnected);
-            #[cfg(feature = "desktop")]
-            self.clipboard.clear();
+            self.disconnected();
         }
+    }
+    fn disconnected(&mut self) {
+        self.session = None;
+        self.credentials.clear();
+        #[cfg(feature = "desktop")]
+        self.clipboard.clear();
+        self.emit(Event::Disconnected);
     }
     fn emit(&self, event: Event) {
         let _ = self.tx.send_blocking(event);
@@ -172,9 +175,7 @@ impl Worker {
         let result = self.execute(command);
         if let Err(e) = result {
             if matches!(e, YubiKeyError::NoDevice | YubiKeyError::Disconnected) {
-                self.session = None;
-                self.credentials.clear();
-                self.emit(Event::Disconnected);
+                self.disconnected();
             }
             self.emit(Event::Error(e.to_string()));
         }
@@ -221,7 +222,9 @@ impl Worker {
             }
             Command::Calculate(id) => {
                 let cred = self.credential(&id)?.clone();
-                if cred.touch_required {
+                // CALCULATE_ALL does not reveal an HOTP credential's touch policy.
+                // Keep its pending operation cancellable without assuming no touch.
+                if cred.touch_required || cred.is_hotp() {
                     self.emit(Event::Touch(id.clone()));
                 }
                 let (code, digits) = self
@@ -267,11 +270,7 @@ impl Worker {
             }
             Command::Disconnect => {
                 self.reconnect_enabled = false;
-                #[cfg(feature = "desktop")]
-                self.clipboard.clear();
-                self.session = None;
-                self.credentials.clear();
-                self.emit(Event::Disconnected);
+                self.disconnected();
             }
             Command::Import(path) => {
                 let result = crate::qr::scan_qr_file(&path);
@@ -395,9 +394,7 @@ impl Worker {
             }
             Err(e) => {
                 if matches!(e, YubiKeyError::Disconnected | YubiKeyError::NoDevice) {
-                    self.session = None;
-                    self.credentials.clear();
-                    self.emit(Event::Disconnected);
+                    self.disconnected();
                 } else if matches!(e, YubiKeyError::AuthenticationRequired) {
                     self.connect(false);
                 }
@@ -426,8 +423,13 @@ impl Worker {
         } else {
             folder.join(format!("{domain}.png"))
         };
-        if std::fs::metadata(&path).is_ok_and(|m| m.len() <= 256 * 1024) {
-            if let Ok(png) = std::fs::read(path) {
+        if let Ok(file) = std::fs::File::open(&path) {
+            if file.metadata().is_ok_and(|m| m.is_file()) {
+                use std::io::Read;
+                let mut png = Vec::new();
+                if file.take(256 * 1024 + 1).read_to_end(&mut png).is_err() {
+                    return;
+                }
                 if let Ok(png) = normalize_icon(&png) {
                     self.emit(Event::IconReady(domain, png));
                 }
@@ -524,4 +526,109 @@ fn normalize_icon(bytes: &[u8]) -> Result<Vec<u8>, YubiKeyError> {
         .write_to(&mut png, image::ImageFormat::Png)
         .map_err(|e| YubiKeyError::Generic(e.to_string()))?;
     Ok(png.into_inner())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::yubikey::{connection::OathConnection, error::Result, Algorithm, OathType};
+
+    struct RemovedCard;
+    impl OathConnection for RemovedCard {
+        fn is_present(&self) -> Result<bool> {
+            Ok(false)
+        }
+        fn version(&self) -> (u8, u8, u8) {
+            (5, 7, 1)
+        }
+        fn device_id(&self) -> [u8; 8] {
+            *b"12345678"
+        }
+        fn challenge(&self) -> Option<&[u8]> {
+            Some(b"abcdefgh")
+        }
+        fn transmit(&self, _: &[u8]) -> Result<Vec<u8>> {
+            panic!("Presence checks must not calculate a code or require unlock")
+        }
+    }
+    fn worker(path: std::path::PathBuf) -> (Worker, Receiver<Event>) {
+        let (tx, events) = async_channel::bounded(64);
+        #[cfg(feature = "desktop")]
+        let clipboard = super::super::clipboard::ClipboardService::start(tx.clone());
+        (
+            Worker {
+                session: Some(OathSession::new(RemovedCard)),
+                credentials: vec![Credential {
+                    id: CredentialId(b"HOTP-only:alice".to_vec()),
+                    issuer: Some("HOTP-only".into()),
+                    account: "alice".into(),
+                    oath_type: OathType::Hotp,
+                    algorithm: Algorithm::Sha1,
+                    digits: 6,
+                    touch_required: false,
+                    code: Some("123 456".into()),
+                    period: 30,
+                    valid_until: None,
+                }],
+                settings: Settings::default(),
+                store: SettingsStore { path },
+                tx,
+                cancel: Arc::new(AtomicU64::new(0)),
+                reconnect_enabled: true,
+                generation: 0,
+                #[cfg(feature = "desktop")]
+                clipboard,
+            },
+            events,
+        )
+    }
+    #[test]
+    fn presence_poll_clears_locked_hotp_only_device_without_calculation() {
+        let dir = tempfile::tempdir().unwrap();
+        let (mut worker, events) = worker(dir.path().join("settings.json"));
+        worker.check_presence();
+        assert!(worker.session.is_none());
+        assert!(worker.credentials.is_empty());
+        assert!(worker.reconnect_enabled);
+        assert!(matches!(
+            events.recv_blocking().unwrap(),
+            Event::Disconnected
+        ));
+    }
+    #[test]
+    fn explicit_disconnect_pauses_reconnect_and_cancel_discards_queued_import() {
+        let dir = tempfile::tempdir().unwrap();
+        let (mut worker, events) = worker(dir.path().join("settings.json"));
+        worker.execute(Command::Disconnect).unwrap();
+        assert!(!worker.reconnect_enabled);
+        assert!(worker.credentials.is_empty());
+        assert!(matches!(
+            events.recv_blocking().unwrap(),
+            Event::Disconnected
+        ));
+        worker.cancel.store(1, Ordering::Release);
+        worker.handle(Queued {
+            command: Command::Import(dir.path().join("does not exist.png")),
+            generation: 0,
+        });
+        assert!(matches!(events.recv_blocking().unwrap(), Event::Cancelled));
+        assert!(events.try_recv().is_err());
+    }
+    #[test]
+    fn favicon_normalization_rejects_oversize_and_corrupt_images() {
+        assert!(normalize_icon(b"not an image").is_err());
+        assert!(normalize_icon(&vec![0; 256 * 1024 + 1]).is_err());
+        let mut large = std::io::Cursor::new(Vec::new());
+        image::DynamicImage::new_rgba8(1025, 1)
+            .write_to(&mut large, image::ImageFormat::Png)
+            .unwrap();
+        assert!(normalize_icon(large.get_ref()).is_err());
+        let mut valid = std::io::Cursor::new(Vec::new());
+        image::DynamicImage::new_rgba8(128, 64)
+            .write_to(&mut valid, image::ImageFormat::Png)
+            .unwrap();
+        let png = normalize_icon(valid.get_ref()).unwrap();
+        let normalized = image::load_from_memory(&png).unwrap();
+        assert_eq!((normalized.width(), normalized.height()), (64, 32));
+    }
 }

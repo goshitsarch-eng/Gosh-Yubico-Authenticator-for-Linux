@@ -16,6 +16,6 @@ import sys
 
 path = Path(sys.argv[1])
 normalized = path.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
-path.write_bytes(normalized)
+path.write_bytes(b"\n".join(line.rstrip() for line in normalized.split(b"\n")))
 PY
 printf 'RUST_THIRD_PARTY_LICENSES_GENERATED output=%s\n' "$root/THIRD_PARTY_LICENSES.html"

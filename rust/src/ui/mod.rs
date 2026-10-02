@@ -20,6 +20,7 @@ pub enum Page {
 pub enum Dialog {
     None,
     About,
+    Licenses,
     Unlock,
     Password,
     Delete(CredentialId),
@@ -36,6 +37,7 @@ pub struct Ui {
     pub now: Signal<u64>,
     pub runtime: Signal<Runtime>,
     pub quitting: Signal<bool>,
+    pub focus_search: Signal<bool>,
 }
 impl Ui {
     pub fn send(&self, command: Command) {
@@ -95,10 +97,9 @@ impl Ui {
             "unlock" => dialog.set(Dialog::Unlock),
             "quit" => self.quit(),
             "search" => {
+                let mut focus_search = self.focus_search;
+                focus_search.set(true);
                 page.set(Page::Credentials);
-                spawn(async {
-                    let _ = document::eval("document.getElementById('search')?.focus()").await;
-                });
             }
             _ => {}
         }
@@ -128,8 +129,11 @@ pub fn App() -> Element {
         now,
         runtime: use_signal(|| startup.runtime.clone()),
         quitting: use_signal(|| false),
+        focus_search: use_signal(|| false),
     };
     use_context_provider(|| ui);
+    let theme_mode = use_memo(move || state.read().settings.theme_mode);
+    use_effect(move || gosh_authenticator_core::platform::apply_theme(*theme_mode.read()));
     let events = startup.runtime.events.clone();
     use_future(move || {
         let events = events.clone();
@@ -284,6 +288,9 @@ pub fn App() -> Element {
                             dialog.set(Dialog::None);
                         }
                     } else if page() == Page::Add {
+                        if keyboard_ui.state.read().busy {
+                            keyboard_ui.runtime.read().cancel();
+                        }
                         page.set(Page::Credentials);
                     }
                 }

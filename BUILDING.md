@@ -40,7 +40,8 @@ binary or an AppImage. Flatpak provides the isolated Linux runtime.
 Use Windows 10/11 x64, the Visual Studio 2022 C++ desktop build tools and the MSVC
 Rust toolchain. The Microsoft Edge WebView2 Evergreen Runtime must be installed;
 download it from [Microsoft](https://developer.microsoft.com/microsoft-edge/webview2/).
-Windows supplies WinSCard. Enable the Smart Card service and the key's CCID/OATH
+The repository config statically links the MSVC CRT; native CI still needs to
+verify the result. Windows supplies WinSCard. Enable the Smart Card service and the key's CCID/OATH
 interface. There is no pcsc-lite, GTK or WebKitGTK dependency on Windows.
 
 ```powershell
@@ -99,9 +100,11 @@ and `--socket=pcsc` connects to the host daemon. File dialogs use the desktop
 portal. No home filesystem or unrestricted USB permission is granted. Network
 permission supports explicitly requested favicons, disabled by default.
 
-Flatpak build/install/runtime validation is currently blocked by this cloud
-environment's Flathub network access. These are build instructions, not a
-record of a successful Flatpak build.
+The x86_64 SDK build, bundle export/install and no-device desktop controls were
+exercised locally. The manifest builds libxdo explicitly because GNOME 50 does
+not supply it. Sandbox selected-file/document portal QA remains blocked by the
+cloud kernel's missing `/dev/fuse`; ARM64/native CI is blocked by account billing.
+See QA.md for the precise scope and platform gates.
 
 ## Checks
 

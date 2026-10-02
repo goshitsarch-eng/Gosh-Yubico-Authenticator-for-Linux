@@ -1,4 +1,4 @@
-use crate::settings::{Settings, SettingsStore, APP_NAME};
+use crate::settings::{Settings, SettingsStore, ThemeMode, APP_NAME};
 use dioxus_desktop::{
     muda::{
         accelerator::{Accelerator, Code, Modifiers},
@@ -12,6 +12,19 @@ pub fn command_modifier() -> Modifiers {
     } else {
         Modifiers::CONTROL
     }
+}
+fn native_theme(mode: ThemeMode) -> Option<dioxus_desktop::tao::window::Theme> {
+    use dioxus_desktop::tao::window::Theme;
+    match mode {
+        ThemeMode::System => None,
+        ThemeMode::Light => Some(Theme::Light),
+        ThemeMode::Dark => Some(Theme::Dark),
+    }
+}
+pub fn apply_theme(mode: ThemeMode) {
+    dioxus_desktop::window()
+        .window
+        .set_theme(native_theme(mode));
 }
 pub fn menu() -> Result<Menu, dioxus_desktop::muda::Error> {
     let menu = Menu::new();
@@ -32,6 +45,7 @@ pub fn menu() -> Result<Menu, dioxus_desktop::muda::Error> {
     ])?;
     let credentials = Submenu::new("Credentials", true);
     credentials.append_items(&[
+        &MenuItem::with_id("search", "Search credentials", true, accel(Code::KeyF)),
         &MenuItem::with_id("new", "Add credential…", true, accel(Code::KeyN)),
         &MenuItem::with_id("import", "Import QR image…", true, accel(Code::KeyI)),
         &MenuItem::with_id("refresh", "Refresh", true, accel(Code::KeyR)),
@@ -61,6 +75,7 @@ pub fn config(settings: &Settings, store: &SettingsStore) -> Result<Config, Stri
         .join("webview");
     let window = WindowBuilder::new()
         .with_title(APP_NAME)
+        .with_theme(native_theme(settings.theme_mode))
         .with_inner_size(LogicalSize::new(
             settings.window.width,
             settings.window.height,
@@ -144,4 +159,23 @@ pub async fn open_url_async(url: String) -> Result<(), String> {
 }
 pub async fn show_in_folder_async(path: std::path::PathBuf) -> Result<(), String> {
     native_action(move || show_in_folder(&path)).await
+}
+/// Exports only the trusted, compiled notice document to the OS cache directory.
+pub async fn open_third_party_licenses_async() -> Result<(), String> {
+    native_action(|| {
+        use std::io::Write;
+        let directory = crate::settings::cache_dir()
+            .map_err(|e| e.to_string())?
+            .join("licenses");
+        std::fs::create_dir_all(&directory).map_err(|e| e.to_string())?;
+        let path = directory.join("THIRD_PARTY_LICENSES.html");
+        let mut temporary =
+            tempfile::NamedTempFile::new_in(&directory).map_err(|e| e.to_string())?;
+        temporary
+            .write_all(include_bytes!("../../../THIRD_PARTY_LICENSES.html"))
+            .map_err(|e| e.to_string())?;
+        temporary.persist(&path).map_err(|e| e.to_string())?;
+        open_file(&path)
+    })
+    .await
 }

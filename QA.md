@@ -11,18 +11,95 @@ from required checks instead of presenting source inspection as runtime proof.
 - Rust software tests exercise APDU/TLV parsing, Yubico authentication, touch
   encoding, duplicate protection, password removal state, Unicode URI parsing,
   HOTP counters, nondefault periods, real QR image decoding and bounded inputs.
+  The final all-features and headless runs each pass 39 software tests; the
+  separately executed native clipboard test brings the total to 40 unique Rust
+  tests. The physical connection test remains ignored. Thirteen Python metadata
+  and release/package validation tests pass. Rustfmt and strict Clippy pass.
 - Legacy settings fields and unknown fields survive round trips; malformed files
   remain intact; atomic saves work with Unicode paths, spaces and CRLF JSON.
 - Real Linux desktop smoke exercised no-device state, Retry, navigation, About,
-  add form, Ctrl+N, Cancel and Escape. Further preferences/form/resizing checks are
-  being validated by `scripts/desktop-smoke.py`.
+  every theme/clipboard selector, both preference toggles, About/license details,
+  Unicode URI paste, HOTP counter/digits/algorithm/touch fields, disabled no-device
+  Save, Ctrl+N, Cancel/Escape and 420-pixel resizing. A native portal chooser
+  imported an actual public-test QR image from a filename with spaces and é;
+  Ctrl+I, Ctrl+F from Key Info (including actual Unicode paste into the focused
+  search field) and Ctrl+Q exit passed. Unknown legacy fields survived saves.
+- A fresh application process restored the visibly selected Dark/120-second
+  preferences and both toggles after real UI changes and saving. This exposed
+  and fixed an initial dropdown-selection defect; options now reflect persisted
+  values at mount. The Linux CI smoke includes the restart regression check.
+  That complete CI smoke wrapper ran locally against the final extracted RPM;
+  this is local evidence, separate from the unstarted GitHub jobs below.
 - Native clipboard test passed on isolated Xvfb: expiry clears an owned code,
-  newer user text survives expiry, and shutdown clears the service's owned code.
+  newer Unicode user text survives expiry, and shutdown clears the service's
+  owned code.
 - `cargo audit` has no vulnerability failures after updating Rustls and rqrr;
   four upstream warnings remain explicitly documented in SECURITY.md.
 - Real screenshots are captured from the running Linux application, without a
   connected key or generated pretend credentials. No Windows/macOS screenshot
   has been fabricated.
+
+## Artifact and workflow evidence
+
+- Optimized Linux tar.gz, DEB and RPM were produced, extracted and inspected for
+  executable, icon/desktop/AppStream metadata and first/third-party licenses.
+  Their actual executables reported 2.0.0-alpha.1. The extracted DEB passed the
+  real desktop controls smoke; the extracted RPM also passed the controls,
+  native QR import and Quit check. The DEB and tar contain identical executables.
+  These local artifacts use Debian 13's ABI, not the unrun Ubuntu CI baseline.
+- The actual GNOME 50 x86_64 Flatpak compiled offline/locked, exported, bundled
+  and installed. Its sandboxed UI accepted actual mouse/keyboard navigation,
+  all theme/clipboard selectors, protected-key prompt preference, Unicode URI
+  paste, Ctrl+N/Escape and 420-pixel resizing. Real screenshots were inspected.
+  Persistent sandbox JSON retained an unknown legacy field. No home/all-USB
+  application permission was added. The host private PC/SC socket was exposed
+  at its normal host location for the existing `--socket=pcsc` permission.
+  The final installed stable-branch commit is
+  `13d8836fac1daf99820ad16caebd2244736bc48854ce799b612457675ef15fb1`.
+  Its CLI reports 2.0.0-alpha.1; [preferences](screenshots/flatpak-settings-dark.png)
+  and [Unicode form](screenshots/flatpak-add-credential.png) captures come from
+  this actual sandbox session.
+- The same AT-SPI traversal used for the native WebView cannot access the
+  sandboxed WebView in this cloud session. Its narrower mouse/keyboard checks
+  are recorded separately; the failing accessibility traversal was not labelled
+  passed. The document portal reports missing `/dev/fuse`, so selected sandbox
+  files, file drop, external document opening and complete portal QA remain open.
+- Native/Flatpak CI was requested in [run 36947916875](https://github.com/goshitsarch-eng/Gosh-Yubico-Authenticator-for-Linux/actions/runs/36947916875)
+  and the preceding push run. Every job has zero executed steps. GitHub's check
+  annotation states: “The job was not started because your account is locked
+  due to a billing issue.” No Windows/macOS/ARM64 artifacts were produced,
+  downloaded or verified. Resolve the owner account billing lock, then rerun CI
+  and inspect actual artifacts before claiming those targets/release automation.
+- Release collection guard tests reject an incorrect tag/incomplete artifacts
+  before creating output. Packaging validates actual ELF/PE/Mach-O CPU headers
+  to prevent architecture mislabelling. These tests are not native installer QA.
+  No release tag or published release was created.
+
+Local `dist/SHA256SUMS` checks all four actual x86_64 artifacts (tar.gz, DEB,
+RPM, Flatpak). Build outputs are ignored by Git; they are not a complete native
+release set or remotely uploaded CI artifacts. The Flatpak build helper was
+also executed successfully with the Cargo prerelease version and pinned Rust
+archive, without installing an unused SDK Rust extension.
+
+## Performance gate — open
+
+Three warm-cache debug samples on Debian 13/Xvfb, with the same real PC/SC
+no-reader service, were measured using `scripts/measure-linux.py`. Readiness is
+when an AT-SPI client observes the no-device label; PSS sums the app process tree
+two seconds later. Both builds are debug builds; these are development results,
+not release, GPU, high-DPI or populated-key performance claims.
+The final UI revision was measured again; [raw samples and binary/source
+digests](evidence/linux-debug-performance-2026-10-02.json) record this run.
+
+| Build | Median observed readiness | Median process-tree PSS | Processes |
+|---|---|---|---|
+| GTK baseline 1.2.1 | 0.313 s | 92.7 MiB | 1 |
+| Dioxus development build | 0.518 s | 331.9 MiB | 3 |
+
+The WebView migration has a measured startup/memory regression. Profiling and
+optimization, optimized baseline comparisons, scrolling/filtering with real
+credential lists and Windows/macOS measurements remain required. This gate is
+not closed by a successful build or fast no-device interaction.
 
 ## Required hardware QA — not performed
 

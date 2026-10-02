@@ -1,0 +1,4 @@
+# Keep the Windows installer independent of a separately installed VC++ runtime.
+# WebView2 Evergreen and OS WinSCard remain runtime prerequisites.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

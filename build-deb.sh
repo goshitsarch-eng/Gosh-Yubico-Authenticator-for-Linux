@@ -39,6 +39,13 @@ if [ ! -x "$BIN" ]; then
   echo "Build it first: (cd rust && cargo build --release)" >&2
   exit 1
 fi
+python3 - "$PROJECT_DIR" "$BIN" "$ARCH_INPUT" <<'PY'
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / 'scripts'))
+from package import validate_binary
+validate_binary(Path(sys.argv[2]), 'linux', {'amd64': 'x64', 'arm64': 'arm64'}[sys.argv[3]])
+PY
 
 OUT_NAME="${NAME}_${VERSION_INPUT}_${ARCH_INPUT}.deb"
 OUT_PATH="$PROJECT_DIR/dist/$OUT_NAME"

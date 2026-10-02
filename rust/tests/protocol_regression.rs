@@ -11,12 +11,14 @@ use gosh_authenticator_core::core::{
 };
 use hmac::{Hmac, Mac};
 use sha1::Sha1;
+use sha2::{Sha256, Sha512};
 use std::{collections::VecDeque, sync::Mutex};
 
 type Reply = Box<dyn FnOnce(&[u8]) -> Vec<u8> + Send>;
 struct ScriptedCard {
     replies: Mutex<VecDeque<Reply>>,
     protected: bool,
+    algorithm: Algorithm,
 }
 impl OathConnection for ScriptedCard {
     fn is_present(&self) -> gosh_authenticator_core::core::yubikey::error::Result<bool> {
@@ -30,6 +32,9 @@ impl OathConnection for ScriptedCard {
     }
     fn challenge(&self) -> Option<&[u8]> {
         self.protected.then_some(b"abcdefgh".as_slice())
+    }
+    fn challenge_algorithm(&self) -> Algorithm {
+        self.algorithm
     }
     fn transmit(&self, command: &[u8]) -> Result<Vec<u8>> {
         let reply = self
@@ -49,7 +54,45 @@ fn session(replies: Vec<Reply>, protected: bool) -> OathSession {
     OathSession::new(ScriptedCard {
         replies: Mutex::new(replies.into()),
         protected,
+        algorithm: Algorithm::Sha1,
     })
+}
+
+#[test]
+fn authentication_honours_advertised_sha256_and_sha512() {
+    fn proof(key: &[u8], data: &[u8], algorithm: Algorithm) -> Vec<u8> {
+        macro_rules! sign {
+            ($digest:ty) => {{
+                let mut mac = Hmac::<$digest>::new_from_slice(key).unwrap();
+                mac.update(data);
+                mac.finalize().into_bytes().to_vec()
+            }};
+        }
+        match algorithm {
+            Algorithm::Sha256 => sign!(Sha256),
+            Algorithm::Sha512 => sign!(Sha512),
+            Algorithm::Sha1 => sign!(Sha1),
+        }
+    }
+    for algorithm in [Algorithm::Sha256, Algorithm::Sha512] {
+        let reply: Reply = Box::new(move |command| {
+            let mut key = [0; 16];
+            pbkdf2::pbkdf2_hmac::<Sha1>(b"password", b"12345678", 1000, &mut key);
+            let fields: Vec<_> = apdu::TlvParser::new(&command[5..]).collect();
+            assert_eq!(fields[0].value, proof(&key, b"abcdefgh", algorithm));
+            let signed = proof(&key, fields[1].value, algorithm);
+            let mut response = vec![0x75, signed.len() as u8];
+            response.extend(signed);
+            success(response)
+        });
+        let mut session = OathSession::new(ScriptedCard {
+            replies: Mutex::new(vec![reply].into()),
+            protected: true,
+            algorithm,
+        });
+        session.validate("password").unwrap();
+        assert!(!session.requires_auth());
+    }
 }
 
 #[test]

@@ -4,13 +4,15 @@ import argparse
 import subprocess
 import tempfile
 import time
+import tomllib
 from pathlib import Path
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("binary", type=Path)
 args = parser.parse_args()
 binary = args.binary.resolve(strict=True)
-assert "2.0.0" in subprocess.check_output([str(binary), "--version"], text=True)
+version=tomllib.loads((Path(__file__).resolve().parents[1]/'rust/Cargo.toml').read_text())['package']['version']
+assert version in subprocess.check_output([str(binary), "--version"], text=True)
 with tempfile.TemporaryDirectory(prefix="Gosh smoke 配置 ") as directory:
     path = Path(directory) / "settings.json"
     with (Path(directory) / "app.log").open("w+") as log:

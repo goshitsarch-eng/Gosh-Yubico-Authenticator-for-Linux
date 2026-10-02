@@ -6,7 +6,9 @@ personal account labels in public issues or logs.
 
 The app stores OATH secrets on the key, not in a local credential database. It
 uses the OS PC/SC stack, Yubico's 16-byte PBKDF2-HMAC-SHA1 authentication key,
-secure random challenges and constant-time proof verification. Rust secret/key
+secure random challenges and constant-time proof verification for the key's
+advertised SHA1/SHA256/SHA512 algorithm. Malformed or duplicate SELECT
+authentication metadata is rejected. Rust secret/key
 buffers use best-effort zeroization. WebView/process memory cannot be guaranteed
 to be wiped; masked form values are transient and never deliberately written to
 disk. Clipboard clearing compares current contents with the last copied code.

@@ -130,10 +130,24 @@ impl YubiKeyConnection {
                     ));
                 }
                 Some(Tag::Challenge) => {
+                    if challenge.is_some() || tlv.value.len() != 8 {
+                        return Err(YubiKeyError::InvalidResponse(
+                            "Invalid authentication challenge".into(),
+                        ));
+                    }
                     challenge = Some(tlv.value.to_vec());
                 }
-                Some(Tag::Algorithm) if !tlv.value.is_empty() => {
-                    algo = apdu::Algorithm::from_byte(tlv.value[0]);
+                Some(Tag::Algorithm) => {
+                    if algo.is_some() || tlv.value.len() != 1 {
+                        return Err(YubiKeyError::InvalidResponse(
+                            "Invalid authentication algorithm".into(),
+                        ));
+                    }
+                    let parsed = apdu::Algorithm::from_byte(tlv.value[0])
+                        .filter(|a| *a as u8 == tlv.value[0]);
+                    algo = Some(parsed.ok_or_else(|| {
+                        YubiKeyError::InvalidResponse("Unsupported authentication algorithm".into())
+                    })?);
                 }
                 _ => {}
             }
@@ -254,6 +268,9 @@ pub trait OathConnection: Send {
     fn version(&self) -> (u8, u8, u8);
     fn device_id(&self) -> [u8; 8];
     fn challenge(&self) -> Option<&[u8]>;
+    fn challenge_algorithm(&self) -> apdu::Algorithm {
+        apdu::Algorithm::Sha1
+    }
     fn transmit(&self, command: &[u8]) -> Result<Vec<u8>>;
 }
 impl OathConnection for YubiKeyConnection {
@@ -275,6 +292,9 @@ impl OathConnection for YubiKeyConnection {
     }
     fn challenge(&self) -> Option<&[u8]> {
         self.challenge.as_deref()
+    }
+    fn challenge_algorithm(&self) -> apdu::Algorithm {
+        self.challenge_algorithm.unwrap_or(apdu::Algorithm::Sha1)
     }
     fn transmit(&self, command: &[u8]) -> Result<Vec<u8>> {
         YubiKeyConnection::transmit(self, command)
@@ -308,6 +328,23 @@ mod tests {
         response
     }
 
+    #[test]
+    fn select_rejects_invalid_or_duplicate_authentication_metadata() {
+        for extra in [
+            vec![0x7b, 1, 0x21],
+            vec![0x7b, 0],
+            vec![0x74, 1, 7],
+            vec![0x7b, 1, 1, 0x7b, 1, 2],
+        ] {
+            let mut data = vec![0x79, 3, 5, 7, 1, 0x71, 8];
+            data.extend_from_slice(b"12345678");
+            data.extend(extra);
+            assert!(
+                YubiKeyConnection::parse_select_response(&successful_select_response(&data))
+                    .is_err()
+            );
+        }
+    }
     #[test]
     fn select_response_requires_device_id() {
         let response = successful_select_response(&[Tag::Version as u8, 3, 5, 7, 1]);

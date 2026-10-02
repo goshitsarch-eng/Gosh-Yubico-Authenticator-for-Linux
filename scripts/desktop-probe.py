@@ -6,26 +6,45 @@ import sys
 import time
 import gi
 gi.require_version("Atspi", "2.0")
-from gi.repository import Atspi
+from gi.repository import Atspi, GLib
 
 
 def walk(node):
     yield node
-    for index in range(node.get_child_count()):
-        child = node.get_child_at_index(index)
+    try:
+        count=node.get_child_count()
+    except GLib.Error:
+        return  # Widgets can disappear while the app changes connection state.
+    for index in range(count):
+        try:
+            child = node.get_child_at_index(index)
+        except GLib.Error:
+            continue
         if child is not None:
             yield from walk(child)
+
+
+def role(node):
+    try:
+        return node.get_role_name()
+    except GLib.Error:
+        return 'defunct'
 
 
 request = json.loads(sys.stdin.read())
 deadline = time.monotonic() + 3
 while time.monotonic() < deadline:
-    nodes = sorted(walk(Atspi.get_desktop(0)), key=lambda n: n.get_role_name() != "button")
+    nodes = sorted(walk(Atspi.get_desktop(0)), key=lambda n: role(n) != "button")
     for node in nodes:
-        text = node.get_name()
+        try:
+            text = node.get_name()
+        except GLib.Error:
+            continue
         if not text and node.get_role_name() == "paragraph":
             text = Atspi.Text.get_text(node, 0, -1)
-        if text != request["name"]:
+        if not (text.startswith(request['name']) if request.get('prefix') else text == request['name']):
+            continue
+        if request.get('role') and role(node)!=request['role']:
             continue
         result = {"role": node.get_role_name(), "name": text,
                   "enabled": node.get_state_set().contains(Atspi.StateType.ENABLED),
@@ -42,6 +61,10 @@ while time.monotonic() < deadline:
                 subprocess.run(["xdotool", "key", "space" if node.get_role_name() == "check box" else "Return"], check=True)
             else:
                 assert action.do_action(0)
+        elif operation == "selected":
+            # WebKit exposes option states but no Selection interface on select.
+            result['selected'] = [child.get_name() for child in walk(node)
+                                  if child.get_state_set().contains(Atspi.StateType.SELECTED)]
         elif operation == "text":
             # WebKit deliberately omits EditableText on password entries. Paste
             # through the real keyboard/clipboard, as a user would paste a URI.
@@ -51,7 +74,8 @@ while time.monotonic() < deadline:
             subprocess.run(["xdotool", "key", "ctrl+v"], check=True)
         elif operation == "select":
             assert Atspi.Component.grab_focus(node)
-            subprocess.run(["xdotool", "key", "space"], check=True)
+            rect=Atspi.Component.get_extents(node, Atspi.CoordType.SCREEN)
+            subprocess.run(["xdotool", "mousemove", str(rect.x+rect.width//2), str(rect.y+rect.height//2), "click", "1"], check=True)
             subprocess.run(["xdotool", "key", "Home"], check=True)
             for _ in range(request["index"]):
                 subprocess.run(["xdotool", "key", "Down"], check=True)

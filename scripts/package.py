@@ -21,6 +21,32 @@ APP_NAME = "Gosh Yubico Authenticator"
 VERSION = tomllib.loads((ROOT / "rust/Cargo.toml").read_text())["package"]["version"]
 
 
+def validate_binary(binary: Path, target: str, arch: str) -> None:
+    """Prevent a real artifact from being labelled for the wrong OS/CPU."""
+    with binary.open("rb") as handle:
+        header = handle.read(64)
+        if target == "linux" and header[:6] == b"\x7fELF\x02\x01":
+            machine = int.from_bytes(header[18:20], "little")
+            expected = {"x64": 62, "arm64": 183}[arch]
+        elif target == "macos" and header[:4] == b"\xcf\xfa\xed\xfe":
+            machine = int.from_bytes(header[4:8], "little")
+            expected = {"x64": 0x01000007, "arm64": 0x0100000C}[arch]
+        elif target == "windows" and header[:2] == b"MZ" and len(header) == 64:
+            offset = int.from_bytes(header[60:64], "little")
+            if offset < 64 or offset > binary.stat().st_size - 6:
+                raise ValueError("Invalid PE executable header")
+            handle.seek(offset)
+            pe = handle.read(6)
+            if pe[:4] != b"PE\0\0":
+                raise ValueError("Invalid PE executable signature")
+            machine = int.from_bytes(pe[4:6], "little")
+            expected = {"x64": 0x8664, "arm64": 0xAA64}[arch]
+        else:
+            raise ValueError(f"Expected a native 64-bit {target} executable")
+    if machine != expected:
+        raise ValueError(f"Executable CPU {machine:#x} does not match {arch}")
+
+
 def licenses(destination: Path) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     for name in ("LICENSE", "THIRD_PARTY_LICENSES.html"):
@@ -135,12 +161,14 @@ def main() -> None:
     host = {"Linux": "linux", "Darwin": "macos", "Windows": "windows"}[platform.system()]
     if host != args.platform:
         parser.error("Run native packaging on the target OS")
+    validate_binary(binary, args.platform, args.arch)
     args.out.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="gosh package ") as temporary:
         artifact = globals()[f"package_{args.platform}"](binary, Path(temporary), args.out.resolve(), args.arch)
     if artifact.stat().st_size == 0:
         raise RuntimeError("The packaging tool produced an empty artifact")
-    checksum = hashlib.file_digest(artifact.open("rb"), "sha256").hexdigest()
+    with artifact.open("rb") as handle:
+        checksum = hashlib.file_digest(handle, "sha256").hexdigest()
     artifact.with_name(artifact.name + ".sha256").write_text(f"{checksum}  {artifact.name}\n")
     print(artifact)
 

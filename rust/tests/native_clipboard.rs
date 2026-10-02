@@ -16,9 +16,9 @@ fn expiry_and_shutdown_preserve_newer_native_clipboard_contents() {
         Event::Success(_)
     ));
     assert_eq!(clipboard.get_text().unwrap(), "123456");
-    clipboard.set_text("newer user text").unwrap();
+    clipboard.set_text("新しい user text é").unwrap();
     std::thread::sleep(Duration::from_millis(600));
-    assert_eq!(clipboard.get_text().unwrap(), "newer user text");
+    assert_eq!(clipboard.get_text().unwrap(), "新しい user text é");
     service
         .copy("654321".into(), Duration::from_millis(200))
         .unwrap();

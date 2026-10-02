@@ -177,8 +177,8 @@ pub fn AddCredential() -> Element {
                         "aria-label": "Type",
                         value: f.kind.clone(),
                         onchange: move |e| form.write().kind = e.value(),
-                        option { value: "totp", "TOTP (time based)" }
-                        option { value: "hotp", "HOTP (counter based)" }
+                        option { value: "totp", selected: f.kind == "totp", "TOTP (time based)" }
+                        option { value: "hotp", selected: f.kind == "hotp", "HOTP (counter based)" }
                     }
                 }
                 label { class: "field",
@@ -188,7 +188,7 @@ pub fn AddCredential() -> Element {
                         value: f.algorithm.clone(),
                         onchange: move |e| form.write().algorithm = e.value(),
                         for algorithm in ["SHA1", "SHA256", "SHA512"] {
-                            option { value: algorithm, "{algorithm}" }
+                            option { value: algorithm, selected: f.algorithm == algorithm, "{algorithm}" }
                         }
                     }
                 }
@@ -199,7 +199,7 @@ pub fn AddCredential() -> Element {
                         value: f.digits.clone(),
                         onchange: move |e| form.write().digits = e.value(),
                         for digits in ["6", "7", "8"] {
-                            option { value: digits, "{digits}" }
+                            option { value: digits, selected: f.digits == digits, "{digits}" }
                         }
                     }
                 }

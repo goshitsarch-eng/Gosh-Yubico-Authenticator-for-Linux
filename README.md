@@ -4,9 +4,10 @@ A Rust and Dioxus Desktop application for managing OATH credentials on a YubiKey
 The 2.0 migration targets Windows, macOS and Linux, including Flatpak. Credentials
 stay on the hardware key; the app uses the operating system's smart-card service.
 
-**2.0.0-alpha.1 is a migration prerelease.** Linux software/runtime validation is
-underway; native Windows/macOS, real-key interoperability and distribution signing
-must be verified before a stable release. See [platform evidence](PLATFORM_SUPPORT.md)
+**2.0.0-alpha.1 is a migration prerelease.** Linux X11 software/UI checks and an actual x86_64 Flatpak build/install have
+passed. GitHub blocked native CI because the owner account is locked for billing;
+Windows/macOS/ARM64, real-key interoperability and distribution signing remain
+release gates. Startup/memory measurements also show an open regression. See [platform evidence](PLATFORM_SUPPORT.md)
 and the [QA record](QA.md). Existing 1.x releases use the historical GTK frontend.
 
 ![Running Linux application, no key attached](screenshots/linux-credentials-light.png)

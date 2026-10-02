@@ -116,7 +116,7 @@ means implemented; it does not close a hardware or native-platform QA gate.
 | Add issuer/account/secret/type/algorithm/digits/touch | PARTIAL, `add_page.rs` | Submission closes and clears before success; invalid/empty secret validation inconsistent; disconnected form can submit | MIGRATED validated form retained until success; all available fields and disabled disconnected Save verified in Linux UI |
 | HOTP initial counter | BROKEN import, `add_page.rs` | Always writes zero; no editable counter | VERIFIED parser/form/protocol counter 42; actual YubiKey counter gate |
 | Nondefault TOTP periods | BROKEN import, `qr.rs` / form | Parser accepts then form discards; period prefix not interpreted in names | VERIFIED URI/form/protocol 60-second period and UTF-8 name; actual code timing gate |
-| QR file import | PARTIAL, `qr.rs` | PNG/JPEG/WebP; only first QR, blocking/unbounded decode | MIGRATED bounded worker decode/native portal picker/file drop; actual QR image tests verified; dialog/drop QA pending |
+| QR file import | PARTIAL, `qr.rs` | PNG/JPEG/WebP; only first QR, blocking/unbounded decode | MIGRATED bounded worker decode/native portal picker/file drop; actual QR image tests verified; native portal selection/import verified; sandbox portal blocked by /dev/fuse; drop QA pending |
 | Pasted otpauth URI | PARTIAL, `qr.rs` | UTF-8 corruption, duplicate/invalid values accepted, issuer mismatch ignored | VERIFIED strict parser regression and actual Unicode URI paste into Linux UI |
 | Copy code / transient copied feedback | PARTIAL, row + clipboard | Copies formatted code with spaces; expiry overwrites unrelated newer clipboard contents | MIGRATED plain codes/expiry validation; native clipboard ownership, expiry and shutdown tests verified; device Copy gate |
 | Clipboard expiry preferences | WORKING persistence, Settings | Five durations; filesystem failures swallowed | VERIFIED all five selectors and atomic persistence in Linux UI; legacy unknown fields retained |
@@ -128,9 +128,9 @@ means implemented; it does not close a hardware or native-platform QA gate.
 | Follow System / Light / Dark | WORKING, `prefs.rs` | Dynamic GTK theme; explicit choice persisted | VERIFIED Linux live Light/Dark/System selectors and settings persistence; OS/Wayland appearance gates |
 | About, website, issue URL, license | WORKING source/menu, dialogs | Hardcoded version; inherited GTK About behavior | VERIFIED Linux About content/Cargo version; native menus and HTTPS links implemented; browser/platform gates |
 | Quit / window lifecycle | WORKING, menu | Window size/position not persisted | MIGRATED window state, native close/quit and clipboard shutdown; resize/clipboard tests verified; lifecycle/platform gates |
-| Keyboard shortcuts / drag and drop | NOT IMPLEMENTED baseline | Add shortcuts and QR image drop where supported | MIGRATED Ctrl/Cmd shortcuts and native QR drop; Linux Ctrl+N/Escape verified; remaining OS/drop gates |
-| Windows / macOS packages | NOT IMPLEMENTED | No installer/bundle or QA | MIGRATED WiX MSI and signed app-bundle scripts plus native CI jobs; actual artifacts/CI pending |
-| Flatpak / Linux release packages | PARTIAL, manifests/scripts | Existing x86_64 Rust archive only; README incorrectly describes SDK extension; RPM/DEB omit license material | MIGRATED native tar/DEB/RPM, both Flatpak architectures/offline lock sources, notices; local optimized/RPM build verified; sandbox/artifact gates pending |
+| Keyboard shortcuts / drag and drop | NOT IMPLEMENTED baseline | Add shortcuts and QR image drop where supported | MIGRATED Ctrl/Cmd shortcuts and native QR drop; Linux Ctrl+N/Escape, Ctrl+I, Ctrl+F focus/paste and Ctrl+Q verified; remaining OS/drop gates |
+| Windows / macOS packages | NOT IMPLEMENTED | No installer/bundle or QA | MIGRATED WiX MSI and signed app-bundle scripts plus native CI jobs; MSI/app bundle CI requested but blocked before any step by account billing; native install/QA pending |
+| Flatpak / Linux release packages | PARTIAL, manifests/scripts | Existing x86_64 Rust archive only; README incorrectly describes SDK extension; RPM/DEB omit license material | MIGRATED native tar/DEB/RPM, both Flatpak architectures/offline lock sources, notices; local tar/DEB/RPM and actual x86_64 Flatpak build/export/install/UI verified; ARM64/release/manual gates pending |
 
 ## Existing tests and important bugs
 
@@ -156,11 +156,11 @@ security model while removing its toolkit-specific callback architecture.
 - [x] Feature inventory and known limitations recorded before rewriting.
 - [x] New architecture documented and implemented (ARCHITECTURE.md).
 - [ ] Each inventory row has a concrete implementation and regression evidence.
-- [ ] New Linux UI launched and every available control exercised.
+- [x] New Linux UI launched; all available no-device preferences/form controls, About/license, portal import and quit exercised. External browser/file-manager and device controls remain explicit manual gates.
 - [ ] Windows and macOS CI builds and native QA recorded separately.
-- [ ] Actual Flatpak built, installed and exercised inside its sandbox.
+- [x] Actual x86_64 Flatpak built, installed and exercised inside its sandbox; selected-file portal and ARM64 gates remain open.
 - [ ] Release artifacts and checksums exist and release workflow has run.
-- [ ] Documentation, license notices and final feature comparison agree.
+- [x] Documentation, current notices and the feature comparison reflect observed results and open gates.
 
 Do not check external platform/hardware boxes on the basis of mocks or source
 inspection. Record each blocked operation and its precise prerequisite.
@@ -194,3 +194,26 @@ connects to real PC/SC and displays no fabricated credential data.
 Hardware-dependent dialogs/actions, Windows/macOS full interaction, Wayland,
 high DPI/Retina, portal/drop integration and complete sandbox QA remain open
 until their evidence is recorded in QA.md and PLATFORM_SUPPORT.md.
+
+Final review retained About's full first-party license view and added access to
+compiled third-party notices through native file opening. Explicit appearance
+now also updates native window/menu theme. Authentication regression coverage
+includes advertised SHA256/SHA512 mutual proofs and rejects malformed/duplicate
+SELECT authentication metadata; SET_CODE deliberately establishes SHA1. HOTP
+operations offer cancellation and a conditional touch instruction because the
+key's list does not report their touch policy.
+
+An actual Ctrl+F test from Key Info exposed a focus race before the credentials
+page mounted. Search now waits for mounting and verifies the active DOM element,
+working around Desktop 0.7.3's invalid focus-result type. Real Unicode paste and
+absence of the false error banner are checked. Cached icon reads
+also enforce their bound on the open file handle, avoiding a metadata/read race.
+Restart QA exposed dynamically inserted select options displaying the first
+entry rather than the persisted value. Explicit option selection fixes both
+preferences and credential fields; visible selected values and a fresh-process
+preferences test cover this regression.
+
+Measured debug readiness increased from 0.313 s to 0.518 s and process-tree PSS
+from 92.7 MiB to 331.9 MiB. Performance parity is **not achieved**. CI billing,
+physical hardware, native platform interaction, Wayland/high DPI and complete
+portal QA still prevent a declaration that the migration is complete.

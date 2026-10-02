@@ -16,11 +16,12 @@ pub fn Dialogs() -> Element {
     }
     let title = match &current {
         Dialog::About => "About Gosh",
+        Dialog::Licenses => "Licenses",
         Dialog::Unlock => "Unlock YubiKey",
         Dialog::Password => "OATH password",
         Dialog::Delete(_) => "Delete credential?",
         Dialog::Icon(_) => "Choose icon",
-        Dialog::Touch => "Touch your YubiKey",
+        Dialog::Touch => "Generating code",
         Dialog::Actions(_) => "Credential actions",
         Dialog::None => "",
     };
@@ -45,7 +46,7 @@ pub fn Dialogs() -> Element {
                         let step = if e.modifiers().shift() { -1 } else { 1 };
                         spawn(async move {
                             let script = format!(
-                                "const n=[...document.querySelectorAll('.modal button:not([disabled]), .modal input:not([disabled]), .modal select:not([disabled])')]; const i=n.indexOf(document.activeElement); n[(i+{step}+n.length)%n.length]?.focus();",
+                                "const n=[...document.querySelectorAll(\".modal button:not([disabled]), .modal input:not([disabled]), .modal select:not([disabled]), .modal [tabindex='0']\")]; const i=n.indexOf(document.activeElement); n[(i+{step}+n.length)%n.length]?.focus();",
                             );
                             let _ = document::eval(&script).await;
                         });
@@ -75,6 +76,9 @@ pub fn Dialogs() -> Element {
                     Dialog::About => rsx! {
                         About {}
                     },
+                    Dialog::Licenses => rsx! {
+                        LicenseDetails {}
+                    },
                     Dialog::Unlock => rsx! {
                         Unlock {}
                     },
@@ -88,7 +92,9 @@ pub fn Dialogs() -> Element {
                         IconPicker { id }
                     },
                     Dialog::Touch => rsx! {
-                        p { "Touch the illuminated area on your hardware key. The operation runs in the background." }
+                        p {
+                            "If your key lights up, touch its illuminated area. Code generation runs in the background; HOTP touch policy is not reported by the key's credential list."
+                        }
                         p { class: "hint",
                             "Cancelling discards the result; the smart-card operation may take time to return. HOTP counter changes on the key cannot be undone."
                         }
@@ -112,6 +118,7 @@ pub fn Dialogs() -> Element {
 #[component]
 fn About() -> Element {
     let ui = use_context::<Ui>();
+    let mut dialog = ui.dialog;
     rsx! {
         div { class: "about-mark", "G" }
         h3 { "{APP_NAME}" }
@@ -123,9 +130,32 @@ fn About() -> Element {
             "Secure hardware, secure login. An independent application, not affiliated with or endorsed by Yubico. Yubico and YubiKey are trademarks of Yubico AB."
         }
         p { "© Goshitsarch · GPL-3.0-or-later" }
+        button { onclick: move |_| dialog.set(Dialog::Licenses), "License details" }
         div { class: "form-actions",
             button { onclick: move |_| ui.open_url(APP_WEBSITE), "Project website" }
             button { onclick: move |_| ui.open_url(&format!("{APP_WEBSITE}/issues")), "Report an issue" }
+        }
+    }
+}
+#[component]
+fn LicenseDetails() -> Element {
+    let ui = use_context::<Ui>();
+    rsx! {
+        p {
+            "Gosh Yubico Authenticator is licensed under GPL-3.0-or-later. Dependency licenses are also included in every package."
+        }
+        pre { class: "license-text", tabindex: "0", {include_str!("../../../LICENSE")} }
+        button {
+            onclick: move |_| {
+                spawn(async move {
+                    if let Err(error) = gosh_authenticator_core::platform::open_third_party_licenses_async()
+                        .await
+                    {
+                        ui.error(error);
+                    }
+                });
+            },
+            "Open third-party notices"
         }
     }
 }

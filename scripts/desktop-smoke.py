@@ -12,10 +12,10 @@ PROBE = Path(__file__).with_name('desktop-probe.py')
 def probe(name, operation='query', **extra):
     return subprocess.run([sys.executable, str(PROBE)], input=json.dumps(dict(name=name, operation=operation, **extra)), text=True, capture_output=True, timeout=10)
 
-def find(name, timeout=20):
+def find(name, timeout=20, **extra):
     deadline=time.monotonic()+timeout
     while time.monotonic()<deadline:
-        result=probe(name)
+        result=probe(name, **extra)
         if result.returncode==0:
             return json.loads(result.stdout)
         if result.returncode!=3:
@@ -57,10 +57,17 @@ find('Appearance')
 find('Clear clipboard')
 find('Prompt to unlock on launch')
 find('Allow optional favicon downloads')
+assert find('Clear clipboard',operation='selected')['selected']==['30 seconds']
 assert not find('Change password…')['enabled']
 change('Theme', 'select', index=2)
 screenshot('linux-settings-dark.png')
+change('Theme', 'select', index=0)
 change('Theme', 'select', index=1)
+for index in range(5):
+    change('Clear clipboard', 'select', index=index)
+    assert find('Clear clipboard',operation='selected')['selected']==[f'{(10,20,30,60,120)[index]} seconds']
+    if os.environ.get('GOSH_SMOKE_DIR'):
+        assert json.loads((Path(os.environ['GOSH_SMOKE_DIR'])/'settings.json').read_text())['clipboard_timeout_seconds']==(10,20,30,60,120)[index]
 change('Clear clipboard', 'select', index=3)
 activate('Prompt to unlock on launch')
 assert find('Prompt to unlock on launch')['checked']
@@ -75,12 +82,24 @@ if settings_dir:
     assert persisted['clipboard_timeout_seconds']==60
     assert not persisted['require_pin_on_launch']
     assert not persisted['allow_favicons']
+    assert persisted['future_setting']=={'v':1}
 activate('About')
 find('About Gosh')
 screenshot('linux-about.png')
+activate('License details')
+find('Licenses')
+find('Open third-party notices')
 activate('Close dialog')
 activate('Key Info')
 find('Insert your YubiKey to view device information.')
+subprocess.run(['xdotool','key','ctrl+f'],check=True)
+time.sleep(.5)
+subprocess.run(['xclip','-selection','clipboard'],input='服务',text=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True)
+subprocess.run(['xdotool','key','ctrl+v'],check=True)
+time.sleep(.4)
+assert find('Search credentials',role='entry')['value']=='服务'
+assert probe('Could not focus search:',prefix=True).returncode==3
+subprocess.run(['xdotool','key','ctrl+a','BackSpace'],check=True)
 activate('Credentials')
 activate('+ Add credential')
 find('Account details')
@@ -90,6 +109,8 @@ change('Secret (Base32 or otpauth URI)', 'text', value='otpauth://totp/%E6%9C%8D
 assert find('Issuer')['value']=='服务'
 assert find('Account')['value']=='é'
 assert find('TOTP period (seconds)')['value']=='60'
+assert find('Digits',operation='selected')['selected']==['8']
+assert find('Algorithm',operation='selected')['selected']==['SHA256']
 change('Type', 'select', index=1)
 find('Initial HOTP counter')
 change('Initial HOTP counter', 'text', value='42')
@@ -111,4 +132,24 @@ time.sleep(.6)
 find('Settings')
 screenshot('linux-small-window.png')
 subprocess.run(['xdotool','windowsize',window,'960','720'],check=True)
+qr_fixture=os.environ.get('GOSH_QR_FIXTURE')
+if qr_fixture:
+    subprocess.run(['xdotool','windowfocus',window,'key','ctrl+i'],check=True)
+    time.sleep(2)
+    subprocess.run(['xdotool','key','ctrl+l'],check=True)
+    subprocess.run(['xclip','-selection','clipboard'],input=qr_fixture,text=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True)
+    subprocess.run(['xdotool','key','ctrl+v','Return'],check=True)
+    time.sleep(1)
+    activate('Select')
+    find('Account details')
+    deadline=time.monotonic()+10
+    while find('Issuer')['value']!='QR Regression' and time.monotonic()<deadline:
+        time.sleep(.2)
+    assert find('Issuer')['value']=='QR Regression'
+    assert find('Account')['value']=='é'
+    assert find('TOTP period (seconds)')['value']=='60'
+    activate('Cancel')
+    print('Native portal QR file selection and background import passed')
+if os.environ.get('GOSH_SMOKE_QUIT'):
+    subprocess.run(['xdotool','windowfocus',window,'key','ctrl+q'],check=True)
 print('Dioxus desktop smoke passed: no-device, retry, navigation, preferences, About, credential form, keyboard shortcut and Escape')
