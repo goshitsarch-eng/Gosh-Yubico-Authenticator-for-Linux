@@ -1,318 +1,376 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
-use adw::prelude::*;
-use gtk::prelude::*;
-
-use crate::prefs::{APP_DEVELOPER, APP_ID, APP_ISSUES, APP_NAME, APP_VERSION, APP_WEBSITE};
-use crate::service_icons::{all_services, extract_domain_from_text};
-use crate::ui::state::AppState;
-use gosh_authenticator_core::core::credential::decode_secret;
-
-pub fn present_about(parent: &impl IsA<gtk::Widget>) {
-    let about = adw::AboutDialog::builder()
-        .application_name(APP_NAME)
-        .application_icon(APP_ID)
-        .developer_name(APP_DEVELOPER)
-        .version(APP_VERSION)
-        .developers(vec![APP_DEVELOPER.to_string()])
-        .copyright("© Goshitsarch")
-        .license_type(gtk::License::Gpl30)
-        .website(APP_WEBSITE)
-        .issue_url(APP_ISSUES)
-        .comments("Manage OATH (TOTP/HOTP) credentials on YubiKey devices.\n\nSECURE HARDWARE, SECURE LOGIN")
-        .build();
-    about.present(Some(parent));
-}
-
-pub fn present_pin_dialog(
-    parent: &impl IsA<gtk::Widget>,
-    state: Rc<AppState>,
-    error: Option<&str>,
-    on_close: impl Fn() + 'static,
-) {
-    if state.pin_open.get() {
-        return;
+use super::{Dialog, Ui};
+use dioxus::prelude::*;
+use gosh_authenticator_core::{
+    app::Command,
+    service_icons::all_services,
+    settings::{validated_domain, IconPreference, Settings, APP_NAME, APP_WEBSITE},
+};
+use zeroize::Zeroize;
+#[component]
+pub fn Dialogs() -> Element {
+    let ui = use_context::<Ui>();
+    let mut dialog = ui.dialog;
+    let current = dialog();
+    if current == Dialog::None {
+        return rsx! {};
     }
-    state.pin_open.set(true);
-
-    let entry = gtk::PasswordEntry::builder()
-        .show_peek_icon(true)
-        .hexpand(true)
-        .activates_default(true)
-        .placeholder_text("YubiKey PIN")
-        .build();
-
-    let body = if let Some(error) = error {
-        format!("{error}\n\nEnter the OATH password for this YubiKey.")
-    } else {
-        "This YubiKey is password protected. Enter the OATH PIN to continue.".to_string()
+    let title = match &current {
+        Dialog::About => "About Gosh",
+        Dialog::Unlock => "Unlock YubiKey",
+        Dialog::Password => "OATH password",
+        Dialog::Delete(_) => "Delete credential?",
+        Dialog::Icon(_) => "Choose icon",
+        Dialog::Touch => "Touch your YubiKey",
+        Dialog::Actions(_) => "Credential actions",
+        Dialog::None => "",
     };
-
-    let dialog = adw::AlertDialog::builder()
-        .heading("Unlock YubiKey")
-        .body(&body)
-        .default_response("unlock")
-        .close_response("cancel")
-        .extra_child(&entry)
-        .build();
-    dialog.add_response("cancel", "Cancel");
-    dialog.add_response("unlock", "Unlock");
-    dialog.set_response_appearance("unlock", adw::ResponseAppearance::Suggested);
-    dialog.set_response_enabled("unlock", false);
-
-    entry.connect_changed({
-        let dialog = dialog.clone();
-        move |entry| {
-            dialog.set_response_enabled("unlock", !entry.text().is_empty());
-        }
-    });
-
-    let on_close = Rc::new(on_close);
-    dialog.connect_response(None, {
-        let state = Rc::clone(&state);
-        let entry = entry.clone();
-        let on_close = Rc::clone(&on_close);
-        move |_, response| {
-            state.pin_open.set(false);
-            if response == "unlock" {
-                let password = entry.text().to_string();
-                if !password.is_empty() {
-                    state.service.authenticate(password);
-                }
-            }
-            on_close();
-        }
-    });
-
-    dialog.present(Some(parent));
-    entry.grab_focus();
-}
-
-pub fn present_touch_dialog(parent: &impl IsA<gtk::Widget>, state: Rc<AppState>) {
-    if state.touch_open.get() {
-        return;
-    }
-    state.touch_open.set(true);
-
-    let dialog = adw::AlertDialog::builder()
-        .heading("Touch required")
-        .body("Touch your YubiKey to generate the code.")
-        .close_response("cancel")
-        .build();
-    dialog.add_response("cancel", "Cancel");
-    dialog.connect_response(None, {
-        let state = Rc::clone(&state);
-        move |_, _| {
-            state.touch_open.set(false);
-        }
-    });
-    dialog.present(Some(parent));
-}
-
-pub fn present_delete_dialog(
-    parent: &impl IsA<gtk::Widget>,
-    state: Rc<AppState>,
-    display_name: String,
-    id: gosh_authenticator_core::core::credential::CredentialId,
-) {
-    let dialog = adw::AlertDialog::builder()
-        .heading("Delete credential?")
-        .body(&format!(
-            "Are you sure you want to delete {display_name}? This cannot be undone."
-        ))
-        .default_response("cancel")
-        .close_response("cancel")
-        .build();
-    dialog.add_response("cancel", "Cancel");
-    dialog.add_response("delete", "Delete");
-    dialog.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
-    dialog.connect_response(None, move |_, response| {
-        if response == "delete" {
-            state.service.delete_credential(id.clone());
-        }
-    });
-    dialog.present(Some(parent));
-}
-
-pub fn present_change_password_dialog(parent: &impl IsA<gtk::Widget>, state: Rc<AppState>) {
-    let password = adw::PasswordEntryRow::builder()
-        .title("New PIN")
-        .build();
-    let confirm = adw::PasswordEntryRow::builder()
-        .title("Confirm PIN")
-        .build();
-    let remove = adw::SwitchRow::builder()
-        .title("Remove password protection")
-        .subtitle("Anyone with physical access can use the key")
-        .build();
-
-    let group = adw::PreferencesGroup::new();
-    group.add(&password);
-    group.add(&confirm);
-    group.add(&remove);
-
-    let dialog = adw::AlertDialog::builder()
-        .heading("Change YubiKey PIN")
-        .body("Set a new OATH password, or remove password protection.")
-        .default_response("save")
-        .close_response("cancel")
-        .extra_child(&group)
-        .build();
-    dialog.add_response("cancel", "Cancel");
-    dialog.add_response("save", "Save");
-    dialog.set_response_appearance("save", adw::ResponseAppearance::Suggested);
-
-    let sync_enabled = {
-        let dialog = dialog.clone();
-        let password = password.clone();
-        let confirm = confirm.clone();
-        let remove = remove.clone();
-        move || {
-            if remove.is_active() {
-                dialog.set_response_enabled("save", true);
-            } else {
-                let p = password.text();
-                let c = confirm.text();
-                dialog.set_response_enabled("save", p.len() >= 4 && p == c);
-            }
-        }
-    };
-    let sync_enabled = Rc::new(sync_enabled);
-    sync_enabled();
-    password.connect_changed({
-        let sync_enabled = Rc::clone(&sync_enabled);
-        move |_| sync_enabled()
-    });
-    confirm.connect_changed({
-        let sync_enabled = Rc::clone(&sync_enabled);
-        move |_| sync_enabled()
-    });
-    remove.connect_active_notify({
-        let sync_enabled = Rc::clone(&sync_enabled);
-        let password = password.clone();
-        let confirm = confirm.clone();
-        move |row| {
-            password.set_sensitive(!row.is_active());
-            confirm.set_sensitive(!row.is_active());
-            sync_enabled();
-        }
-    });
-
-    dialog.connect_response(None, move |_, response| {
-        if response != "save" {
-            return;
-        }
-        if remove.is_active() {
-            state.service.set_password(String::new());
-        } else {
-            let value = password.text().to_string();
-            state.service.set_password(value);
-        }
-    });
-    dialog.present(Some(parent));
-}
-
-pub fn present_icon_picker(
-    parent: &impl IsA<gtk::Widget>,
-    state: Rc<AppState>,
-    credential_id: Vec<u8>,
-    current_domain: Option<String>,
-    on_changed: impl Fn() + 'static,
-) {
-    let flow = gtk::FlowBox::builder()
-        .selection_mode(gtk::SelectionMode::None)
-        .max_children_per_line(4)
-        .min_children_per_line(2)
-        .column_spacing(8)
-        .row_spacing(8)
-        .build();
-
-    let chosen_key = Rc::new(RefCell::new(None::<String>));
-    for service in all_services() {
-        let button = gtk::Button::builder()
-            .label(service.label)
-            .hexpand(true)
-            .build();
-        button.connect_clicked({
-            let chosen_key = Rc::clone(&chosen_key);
-            let key = service.key.to_string();
-            move |_| {
-                *chosen_key.borrow_mut() = Some(key.clone());
-            }
-        });
-        flow.append(&button);
-    }
-
-    let domain = adw::EntryRow::builder()
-        .title("Favicon domain")
-        .text(&current_domain.unwrap_or_default())
-        .build();
-
-    let group = adw::PreferencesGroup::new();
-    group.set_title("Choose icon");
-    group.add(&domain);
-
-    let box_ = gtk::Box::new(gtk::Orientation::Vertical, 12);
-    box_.append(&group);
-    let scrolled = gtk::ScrolledWindow::builder()
-        .min_content_height(220)
-        .hscrollbar_policy(gtk::PolicyType::Never)
-        .child(&flow)
-        .build();
-    box_.append(&scrolled);
-
-    let dialog = adw::AlertDialog::builder()
-        .heading("Choose icon")
-        .default_response("save")
-        .close_response("cancel")
-        .extra_child(&box_)
-        .build();
-    dialog.add_response("cancel", "Cancel");
-    dialog.add_response("reset", "Reset");
-    dialog.add_response("save", "Save");
-    dialog.set_response_appearance("save", adw::ResponseAppearance::Suggested);
-
-    let on_changed = Rc::new(on_changed);
-    dialog.connect_response(None, move |_, response| {
-        let key = crate::prefs::Prefs::icon_key(&credential_id);
-        {
-            let mut prefs = state.prefs.borrow_mut();
-            match response {
-                "reset" => {
-                    prefs.icon_prefs.remove(&key);
-                    prefs.save();
-                }
-                "save" => {
-                    let mut pref = crate::prefs::IconPreference::default();
-                    pref.custom_icon_key = chosen_key.borrow().clone();
-                    let domain_text = domain.text().to_string();
-                    pref.favicon_domain = extract_domain_from_text(&domain_text)
-                        .or_else(|| {
-                            if domain_text.trim().is_empty() {
-                                None
-                            } else {
-                                Some(domain_text.trim().to_string())
-                            }
+    rsx! {
+        div { class: "modal-backdrop",
+            div {
+                class: "modal",
+                role: "dialog",
+                "aria-modal": "true",
+                "aria-label": title,
+                onmounted: move |_| {
+                    spawn(async {
+                        let _ = document::eval(
+                                "document.querySelector('.modal input, .modal button')?.focus()",
+                            )
+                            .await;
+                    });
+                },
+                onkeydown: move |e: KeyboardEvent| {
+                    if e.key() == Key::Tab {
+                        e.prevent_default();
+                        let step = if e.modifiers().shift() { -1 } else { 1 };
+                        spawn(async move {
+                            let script = format!(
+                                "const n=[...document.querySelectorAll('.modal button:not([disabled]), .modal input:not([disabled]), .modal select:not([disabled])')]; const i=n.indexOf(document.activeElement); n[(i+{step}+n.length)%n.length]?.focus();",
+                            );
+                            let _ = document::eval(&script).await;
                         });
-                    if pref.custom_icon_key.is_none() && pref.favicon_domain.is_none() {
-                        prefs.icon_prefs.remove(&key);
-                    } else {
-                        prefs.icon_prefs.insert(key, pref);
                     }
-                    prefs.save();
+                },
+                div { class: "modal-heading",
+                    h2 { "{title}" }
+                    button {
+                        title: "Close dialog",
+                        "aria-label": "Close dialog",
+                        disabled: ui.state.read().busy && current != Dialog::Touch,
+                        onclick: move |_| {
+                            if current == Dialog::Touch {
+                                ui.runtime.read().cancel();
+                            }
+                            dialog.set(Dialog::None);
+                        },
+                        "×"
+                    }
                 }
-                _ => return,
+                if ui.state.read().error {
+                    if let Some(message) = ui.state.read().message.clone() {
+                        p { class: "notice error", role: "alert", "{message}" }
+                    }
+                }
+                match dialog() {
+                    Dialog::About => rsx! {
+                        About {}
+                    },
+                    Dialog::Unlock => rsx! {
+                        Unlock {}
+                    },
+                    Dialog::Password => rsx! {
+                        Password {}
+                    },
+                    Dialog::Delete(id) => rsx! {
+                        DeleteCredential { id }
+                    },
+                    Dialog::Icon(id) => rsx! {
+                        IconPicker { id }
+                    },
+                    Dialog::Touch => rsx! {
+                        p { "Touch the illuminated area on your hardware key. The operation runs in the background." }
+                        p { class: "hint",
+                            "Cancelling discards the result; the smart-card operation may take time to return. HOTP counter changes on the key cannot be undone."
+                        }
+                        button {
+                            onclick: move |_| {
+                                ui.runtime.read().cancel();
+                                dialog.set(Dialog::None);
+                            },
+                            "Cancel request"
+                        }
+                    },
+                    Dialog::Actions(id) => rsx! {
+                        Actions { id }
+                    },
+                    Dialog::None => rsx! {},
+                }
             }
         }
-        on_changed();
-    });
-    dialog.present(Some(parent));
+    }
 }
-
-pub fn secret_is_valid(secret: &str) -> bool {
-    match decode_secret(secret) {
-        Ok(bytes) => !bytes.is_empty(),
-        Err(_) => false,
+#[component]
+fn About() -> Element {
+    let ui = use_context::<Ui>();
+    rsx! {
+        div { class: "about-mark", "G" }
+        h3 { "{APP_NAME}" }
+        p {
+            "Version "
+            {env!("CARGO_PKG_VERSION")}
+        }
+        p {
+            "Secure hardware, secure login. An independent application, not affiliated with or endorsed by Yubico. Yubico and YubiKey are trademarks of Yubico AB."
+        }
+        p { "© Goshitsarch · GPL-3.0-or-later" }
+        div { class: "form-actions",
+            button { onclick: move |_| ui.open_url(APP_WEBSITE), "Project website" }
+            button { onclick: move |_| ui.open_url(&format!("{APP_WEBSITE}/issues")), "Report an issue" }
+        }
+    }
+}
+#[component]
+fn Unlock() -> Element {
+    let ui = use_context::<Ui>();
+    let mut password = use_signal(String::new);
+    let busy = ui.state.read().busy;
+    rsx! {
+        p { "Enter the OATH password for this YubiKey. Passwords are never saved." }
+        label { class: "field",
+            span { "OATH password" }
+            input {
+                r#type: "password",
+                autocomplete: "off",
+                value: password(),
+                oninput: move |e| password.set(e.value()),
+            }
+        }
+        button {
+            class: "primary",
+            disabled: busy || password.read().is_empty(),
+            onclick: move |_| {
+                ui.send(Command::Authenticate(zeroize::Zeroizing::new(password())));
+                password.write().zeroize();
+            },
+            if busy {
+                "Unlocking…"
+            } else {
+                "Unlock"
+            }
+        }
+    }
+}
+#[component]
+fn Password() -> Element {
+    let ui = use_context::<Ui>();
+    let mut password = use_signal(String::new);
+    let mut confirmation = use_signal(String::new);
+    let mut remove = use_signal(|| false);
+    let valid = remove() || (password.read().chars().count() >= 4 && password() == confirmation());
+    rsx! {
+        p { "Protect this key with an OATH password, or explicitly remove its password protection." }
+        label { class: "field",
+            span { "New password" }
+            input {
+                r#type: "password",
+                disabled: remove(),
+                value: password(),
+                oninput: move |e| password.set(e.value()),
+            }
+        }
+        label { class: "field",
+            span { "Confirm password" }
+            input {
+                r#type: "password",
+                disabled: remove(),
+                value: confirmation(),
+                oninput: move |e| confirmation.set(e.value()),
+            }
+        }
+        label { class: "check-row",
+            input {
+                r#type: "checkbox",
+                checked: remove(),
+                onchange: move |e| remove.set(e.checked()),
+            }
+            "Remove password protection"
+        }
+        if remove() {
+            p { class: "validation", "Anyone with physical access will be able to use this key." }
+        }
+        button {
+            class: if remove() { "danger" } else { "primary" },
+            disabled: !valid || ui.state.read().busy,
+            onclick: move |_| {
+                ui.send(
+                    Command::SetPassword(
+                        zeroize::Zeroizing::new(
+                            if remove() { String::new() } else { password() },
+                        ),
+                    ),
+                );
+                password.write().zeroize();
+                confirmation.write().zeroize();
+            },
+            if remove() {
+                "Remove protection"
+            } else {
+                "Save password"
+            }
+        }
+    }
+}
+#[component]
+fn DeleteCredential(id: gosh_authenticator_core::core::credential::CredentialId) -> Element {
+    let ui = use_context::<Ui>();
+    let mut dialog = ui.dialog;
+    let name = ui
+        .state
+        .read()
+        .credentials
+        .iter()
+        .find(|c| c.id == id)
+        .map(|c| c.display_name())
+        .unwrap_or_else(|| "this credential".into());
+    rsx! {
+        p { "Permanently delete {name} from your YubiKey? This cannot be undone." }
+        div { class: "form-actions",
+            button { onclick: move |_| dialog.set(Dialog::None), "Cancel" }
+            button {
+                class: "danger",
+                disabled: ui.state.read().busy,
+                onclick: move |_| ui.send(Command::Delete(id.clone())),
+                "Delete permanently"
+            }
+        }
+    }
+}
+#[component]
+fn Actions(id: gosh_authenticator_core::core::credential::CredentialId) -> Element {
+    let ui = use_context::<Ui>();
+    let mut dialog = ui.dialog;
+    let code = ui
+        .state
+        .read()
+        .credentials
+        .iter()
+        .find(|c| c.id == id)
+        .and_then(|c| c.code.clone());
+    let copy_id = id.clone();
+    let generate_id = id.clone();
+    let icon_id = id.clone();
+    rsx! {
+        div { class: "action-list",
+            button {
+                disabled: code.is_none() || ui.state.read().busy,
+                onclick: move |_| {
+                    ui.send(Command::Copy(copy_id.clone()));
+                    dialog.set(Dialog::None);
+                },
+                "Copy code"
+            }
+            button {
+                disabled: ui.state.read().busy,
+                onclick: move |_| {
+                    ui.send(Command::Calculate(generate_id.clone()));
+                    dialog.set(Dialog::None);
+                },
+                "Generate code"
+            }
+            button { onclick: move |_| dialog.set(Dialog::Icon(icon_id.clone())), "Choose icon" }
+            button {
+                class: "danger",
+                onclick: move |_| dialog.set(Dialog::Delete(id.clone())),
+                "Delete credential…"
+            }
+        }
+    }
+}
+#[component]
+fn IconPicker(id: gosh_authenticator_core::core::credential::CredentialId) -> Element {
+    let ui = use_context::<Ui>();
+    let mut dialog = ui.dialog;
+    let key = Settings::icon_key(&id.0);
+    let pref = ui
+        .state
+        .read()
+        .settings
+        .icon_prefs
+        .get(&key)
+        .cloned()
+        .unwrap_or_default();
+    let mut selected = use_signal(|| pref.custom_icon_key);
+    let mut domain = use_signal(|| pref.favicon_domain.unwrap_or_default());
+    let save_key = key.clone();
+    let reset_ui = ui;
+    let download_ui = ui;
+    rsx! {
+        div { class: "icon-grid",
+            for service in all_services() {
+                button {
+                    class: if selected.read().as_deref() == Some(service.key) { "selected" } else { "" },
+                    "aria-pressed": selected.read().as_deref() == Some(service.key),
+                    onclick: move |_| selected.set(Some(service.key.into())),
+                    "{service.label}"
+                }
+            }
+        }
+        label { class: "field",
+            span { "Optional favicon domain" }
+            input {
+                value: domain(),
+                placeholder: "example.com",
+                oninput: move |e| domain.set(e.value()),
+            }
+        }
+        button {
+            disabled: !ui.state.read().settings.allow_favicons || domain.read().is_empty()
+                || ui.state.read().busy,
+            onclick: move |_| match validated_domain(&domain()) {
+                Ok(d) => download_ui.send(Command::FetchIcon(d)),
+                Err(e) => download_ui.error(e.to_string()),
+            },
+            "Download favicon"
+        }
+        div { class: "form-actions",
+            button {
+                onclick: move |_| {
+                    let mut settings = reset_ui.state.read().settings.clone();
+                    settings.icon_prefs.remove(&key);
+                    reset_ui.send(Command::UpdateSettings(settings));
+                    dialog.set(Dialog::None);
+                },
+                "Reset icon"
+            }
+            button {
+                class: "primary",
+                onclick: move |_| {
+                    let value = if domain.read().trim().is_empty() {
+                        None
+                    } else {
+                        match validated_domain(&domain()) {
+                            Ok(d) => Some(d),
+                            Err(e) => {
+                                ui.error(e.to_string());
+                                return;
+                            }
+                        }
+                    };
+                    let mut settings = ui.state.read().settings.clone();
+                    settings
+                        .icon_prefs
+                        .insert(
+                            save_key.clone(),
+                            IconPreference {
+                                custom_icon_key: selected(),
+                                favicon_domain: value,
+                            },
+                        );
+                    ui.send(Command::UpdateSettings(settings));
+                    dialog.set(Dialog::None);
+                },
+                "Save icon"
+            }
+        }
     }
 }

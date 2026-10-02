@@ -1,193 +1,39 @@
-name: Release Build
-
+name: Release
 on:
   push:
-    tags:
-      - 'v*.*.*'
-
+    tags: ['v*.*.*']
+  workflow_dispatch:
 permissions:
   contents: read
-
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
-  build-packages:
-    name: Build ${{ matrix.arch }} packages
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      matrix:
-        include:
-          - arch: x64
-            runner: ubuntu-24.04
-            rpm_arch: x86_64
-            deb_arch: amd64
-          - arch: arm64
-            runner: ubuntu-24.04-arm
-            rpm_arch: aarch64
-            deb_arch: arm64
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Get version from tag
-        id: version
-        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            curl git \
-            gcc pkg-config \
-            libgtk-4-dev libadwaita-1-dev libpcsclite-dev \
-            rpm dpkg-dev
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Prepare output dirs
-        run: |
-          mkdir -p dist rpmbuild
-
-      - name: Build native app
-        run: |
-          cd rust
-          cargo build --release
-
-      - name: Build RPM
-        run: |
-          RPMBUILD_TOPDIR="${{ github.workspace }}/rpmbuild" \
-            ./build-rpm.sh "${{ steps.version.outputs.VERSION }}"
-
-      - name: Build DEB
-        run: ./build-deb.sh "${{ steps.version.outputs.VERSION }}" "${{ matrix.deb_arch }}"
-
-      - name: Create tarball
-        run: |
-          TARBALL_NAME="gosh-authenticator-${{ steps.version.outputs.VERSION }}-linux-${{ matrix.arch }}"
-          mkdir -p "/tmp/${TARBALL_NAME}"
-          cp rust/target/release/gosh-authenticator "/tmp/${TARBALL_NAME}/"
-          cp data/applications/com.goshapps.YubicoAuthenticator.desktop "/tmp/${TARBALL_NAME}/"
-          cp icon.svg "/tmp/${TARBALL_NAME}/"
-          cp README.md "/tmp/${TARBALL_NAME}/"
-          cd /tmp
-          tar -czf "${TARBALL_NAME}.tar.gz" "${TARBALL_NAME}"
-          mv "${TARBALL_NAME}.tar.gz" "${{ github.workspace }}/dist/"
-
-      - name: Prepare artifacts
-        run: |
-          mkdir -p release-${{ matrix.arch }}
-          cp rpmbuild/RPMS/${{ matrix.rpm_arch }}/*.rpm "release-${{ matrix.arch }}/" || true
-          cp dist/*_${{ matrix.deb_arch }}.deb "release-${{ matrix.arch }}/"
-          cp dist/*-${{ matrix.arch }}.tar.gz "release-${{ matrix.arch }}/"
-          ls -lh release-${{ matrix.arch }}/
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: packages-${{ matrix.arch }}
-          path: release-${{ matrix.arch }}/*
-          retention-days: 1
-
-  build-flatpak:
-    name: Build Flatpak (${{ matrix.arch }})
-    runs-on: ${{ matrix.runner }}
-    container:
-      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-50
-      options: --privileged
-    strategy:
-      matrix:
-        include:
-          - arch: x86_64
-            runner: ubuntu-24.04
-          - arch: aarch64
-            runner: ubuntu-24.04-arm
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Check cargo-sources.json
-        run: python3 flatpak/generate-cargo-sources.py --check
-
-      - name: Build Flatpak
-        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
-        with:
-          bundle: gosh-authenticator-${{ github.ref_name }}-${{ matrix.arch }}.flatpak
-          manifest-path: com.goshapps.YubicoAuthenticator.yml
-          cache-key: flatpak-${{ matrix.arch }}-${{ github.sha }}
-          arch: ${{ matrix.arch }}
-
-  create-release:
-    name: Create GitHub Release
-    needs:
-      - build-packages
-      - build-flatpak
-    runs-on: ubuntu-22.04
+  validate:
+    uses: ./.github/workflows/ci.yml
+  publish:
+    needs: validate
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
-
     steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
         with:
-          path: artifacts/
-
-      - name: Prepare release files
+          path: artifacts
+      - name: Verify version and required artifacts
         run: |
-          mkdir -p release
-          find artifacts -type f \( -name "*.rpm" -o -name "*.deb" -o -name "*.tar.gz" -o -name "*.flatpak" \) -exec cp {} release/ \;
+          python3 scripts/release-artifacts.py artifacts release --tag "$GITHUB_REF_NAME"
           cd release
-          sha256sum * > SHA256SUMS
-          ls -lh
-          cat SHA256SUMS
-
-      - name: Get version
-        id: version
-        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
+          sha256sum -c SHA256SUMS
+      - uses: softprops/action-gh-release@v2
         with:
-          name: Release ${{ steps.version.outputs.VERSION }}
-          body: |
-            ## Gosh Authenticator v${{ steps.version.outputs.VERSION }}
-
-            Native GTK 4 / Adwaita desktop application for managing OATH credentials on YubiKey devices.
-
-            ### Downloads
-
-            **Flatpak (recommended):**
-            - `gosh-authenticator-v${{ steps.version.outputs.VERSION }}-x86_64.flatpak`
-            - `gosh-authenticator-v${{ steps.version.outputs.VERSION }}-aarch64.flatpak`
-
-            **x86_64 / x64:**
-            - `gosh-authenticator-${{ steps.version.outputs.VERSION }}-1.fc43.x86_64.rpm`
-            - `gosh-authenticator_${{ steps.version.outputs.VERSION }}_amd64.deb`
-            - `gosh-authenticator-${{ steps.version.outputs.VERSION }}-linux-x64.tar.gz`
-
-            **ARM64 / aarch64:**
-            - `gosh-authenticator-${{ steps.version.outputs.VERSION }}-1.fc43.aarch64.rpm`
-            - `gosh-authenticator_${{ steps.version.outputs.VERSION }}_arm64.deb`
-            - `gosh-authenticator-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz`
-
-            ### Installation
-
-            **Flatpak:** `flatpak install --user ./gosh-authenticator-v${{ steps.version.outputs.VERSION }}-x86_64.flatpak`
-
-            **RPM:** `sudo dnf install gosh-authenticator-*.rpm`
-
-            **DEB:** `sudo apt install ./gosh-authenticator_*.deb`
-
-            **Tarball:** Extract and run `./gosh-authenticator`
-
-            See [README](https://github.com/${{ github.repository }}/blob/main/README.md) for full installation instructions.
-
-            ### Checksums
-            Verify downloads with `sha256sum -c SHA256SUMS`
+          name: Gosh Yubico Authenticator ${{ github.ref_name }}
           files: release/*
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          fail_on_unmatched_files: true
+          draft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
+          body: |
+            Rust and Dioxus Desktop migration. Review PLATFORM_SUPPORT.md and QA.md before publishing.
+            Windows MSI requires WebView2. macOS app bundles are ad-hoc signed and not notarized.
+            Linux tarballs require WebKitGTK 4.1 / GTK 3 and host PC/SC; Flatpak contains its own UI runtime.
+            Verify downloads with SHA256SUMS. This workflow creates a draft release for review.

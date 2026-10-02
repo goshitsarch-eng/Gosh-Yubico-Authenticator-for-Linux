@@ -12,7 +12,7 @@ impl CredentialId {
 }
 
 /// Represents an OATH credential stored on a YubiKey
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Credential {
     /// Unique identifier (raw name bytes)
     pub id: CredentialId,
@@ -32,6 +32,7 @@ pub struct Credential {
     pub code: Option<String>,
     /// TOTP period in seconds (default: 30)
     pub period: u32,
+    pub valid_until: Option<u64>,
 }
 
 impl Credential {
@@ -77,7 +78,7 @@ pub fn format_code(code: u32, digits: u8) -> String {
 }
 
 /// Parameters for adding a new credential
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct NewCredential {
     pub issuer: Option<String>,
     pub account: String,
@@ -87,6 +88,7 @@ pub struct NewCredential {
     pub digits: u8,
     pub require_touch: bool,
     pub initial_counter: Option<u32>,
+    pub period: u32,
 }
 
 impl Default for NewCredential {
@@ -100,6 +102,7 @@ impl Default for NewCredential {
             digits: 6,
             require_touch: false,
             initial_counter: None,
+            period: 30,
         }
     }
 }
@@ -113,8 +116,11 @@ pub fn decode_secret(secret: &str) -> Result<Vec<u8>, String> {
         .collect::<String>()
         .to_uppercase();
 
+    if cleaned.is_empty() {
+        return Err("Secret key is required".into());
+    }
     // Pad to multiple of 8 if needed
-    let padded = if cleaned.len() % 8 != 0 {
+    let padded = if !cleaned.len().is_multiple_of(8) {
         let padding_len = 8 - (cleaned.len() % 8);
         format!("{}{}", cleaned, "=".repeat(padding_len))
     } else {
@@ -124,6 +130,60 @@ pub fn decode_secret(secret: &str) -> Result<Vec<u8>, String> {
     data_encoding::BASE32
         .decode(padded.as_bytes())
         .map_err(|e| format!("Invalid base32: {}", e))
+}
+
+impl NewCredential {
+    pub fn validate(&self) -> Result<(), String> {
+        if self.account.trim().is_empty() {
+            return Err("Account is required".into());
+        }
+        if self.account.contains(['\0', ':'])
+            || self
+                .issuer
+                .as_deref()
+                .is_some_and(|s| s.contains(['\0', ':']))
+        {
+            return Err("Issuer and account cannot contain a colon or NUL".into());
+        }
+        if self.secret.is_empty() || self.secret.len() > 1024 {
+            return Err("Secret must contain 1–1024 decoded bytes".into());
+        }
+        if !(6..=8).contains(&self.digits) {
+            return Err("Digits must be 6, 7, or 8".into());
+        }
+        if !(1..=86400).contains(&self.period) {
+            return Err("Period must be 1–86400 seconds".into());
+        }
+        if self.name().len() > 64 {
+            return Err("Credential name is longer than the YubiKey's 64-byte limit".into());
+        }
+        Ok(())
+    }
+    pub fn name(&self) -> Vec<u8> {
+        let label = match self.issuer.as_deref().filter(|s| !s.is_empty()) {
+            Some(s) => format!("{s}:{}", self.account),
+            None => self.account.clone(),
+        };
+        if self.oath_type == OathType::Totp && self.period != 30 {
+            format!("{}/{label}", self.period).into_bytes()
+        } else {
+            label.into_bytes()
+        }
+    }
+}
+impl std::fmt::Debug for NewCredential {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NewCredential")
+            .field("oath_type", &self.oath_type)
+            .field("algorithm", &self.algorithm)
+            .field("digits", &self.digits)
+            .finish_non_exhaustive()
+    }
+}
+impl Drop for NewCredential {
+    fn drop(&mut self) {
+        zeroize::Zeroize::zeroize(&mut self.secret);
+    }
 }
 
 #[cfg(test)]

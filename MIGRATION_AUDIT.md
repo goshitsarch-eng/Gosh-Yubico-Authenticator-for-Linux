@@ -19,9 +19,9 @@ complete baseline. No existing source was deleted before this audit.
 No physical YubiKey is attached. Hardware-dependent behavior below is **source
 audited**, not hardware verified. Windows, macOS, Wayland and Flatpak runtime QA
 must have independent evidence; neither Linux compilation nor simulated devices
-count as verification of those environments. GitHub API access currently returns
-Forbidden in this cloud environment; remote workflow/release execution requires
-usable GitHub API/network access. Do not mark CI or releases passed prematurely.
+count as verification of those environments. GitHub API access returned Forbidden during the baseline audit and became
+available on 2026-10-02. Remote workflow results must be recorded separately
+from local checks; do not mark CI or releases passed prematurely.
 
 ## Current architecture
 
@@ -98,39 +98,39 @@ must use cross-platform APIs and Flatpak portals.
 ## Feature inventory
 
 `WORKING` means observed or existing tests support software behavior;
-`UNKNOWN` means hardware or platform evidence is unavailable. Migration status
-starts `NOT IMPLEMENTED` and must be updated only with concrete evidence.
+`UNKNOWN` means hardware or platform evidence is unavailable. The initial inventory is preserved in commit `0d092d0`. `MIGRATED` below
+means implemented; it does not close a hardware or native-platform QA gate.
 
 | Feature | Current state / source | Expected behavior and defects | Migration status / platform considerations |
 |---|---|---|---|
-| Credentials / Key Info / Settings navigation | WORKING, `ui/window.rs` | Three tabs, responsive header/bottom switcher | NOT IMPLEMENTED; shared Dioxus components |
-| Connect / Retry / disconnect | PARTIAL, worker + connection | First reader with OATH; no hotplug retry; errors can leave stale session | NOT IMPLEMENTED; OS-native PC/SC on all platforms |
-| Password unlock | UNKNOWN, `oath.rs`, dialogs | Password-derived key currently 20 bytes, Yubico uses 16; advertised HMAC algorithm ignored; ordinary equality | NOT IMPLEMENTED; protocol tests + hardware gate |
-| Set/change/remove password | UNKNOWN, `oath.rs` | Minimum four characters in UI; password-protection state stays stale | NOT IMPLEMENTED; preserve explicit removal confirmation |
-| Require PIN on launch | DEAD, `prefs.rs`, Settings | Persisted/displayed but never read during connection; cannot secure an unprotected key | NOT IMPLEMENTED; implement actual protected-key unlock policy |
-| List credentials and issuer/account | UNKNOWN, `oath.rs` | Unsupported type/algorithm silently default; malformed TLV tails ignored | NOT IMPLEMENTED; fail closed |
-| TOTP calculation + countdown | UNKNOWN, `oath.rs`, window timer | Every 30 seconds; custom periods ignored | NOT IMPLEMENTED; per-credential period and expiry |
-| HOTP calculation | PARTIAL, worker / row | Counter imported then discarded; HOTP tagged as touch by calculate-all | NOT IMPLEMENTED; explicit Generate advances counter, Copy never does |
-| Touch-required credentials | PARTIAL, worker/dialog | Touch status conflated with HOTP; modal arrives after attempted calculation, cancellation does not cancel PC/SC | NOT IMPLEMENTED; prompt before background operation, explicit cancellation |
-| Search/filter | WORKING software, `ui/state.rs` | ASCII lowercase only; empty filtered list misleadingly says no credentials | NOT IMPLEMENTED; Unicode-aware search and distinct empty results |
-| Add issuer/account/secret/type/algorithm/digits/touch | PARTIAL, `add_page.rs` | Submission closes and clears before success; invalid/empty secret validation inconsistent; disconnected form can submit | NOT IMPLEMENTED; preserve form on failure, validate at domain boundary |
-| HOTP initial counter | BROKEN import, `add_page.rs` | Always writes zero; no editable counter | NOT IMPLEMENTED; preserve URI counter and expose input |
-| Nondefault TOTP periods | BROKEN import, `qr.rs` / form | Parser accepts then form discards; period prefix not interpreted in names | NOT IMPLEMENTED; preserve period per YKOATH naming |
-| QR file import | PARTIAL, `qr.rs` | PNG/JPEG/WebP; only first QR, blocking/unbounded decode | NOT IMPLEMENTED; bounded background decode, native/portal file dialog |
-| Pasted otpauth URI | PARTIAL, `qr.rs` | UTF-8 corruption, duplicate/invalid values accepted, issuer mismatch ignored | NOT IMPLEMENTED; strict parser and regression tests |
-| Copy code / transient copied feedback | PARTIAL, row + clipboard | Copies formatted code with spaces; expiry overwrites unrelated newer clipboard contents | NOT IMPLEMENTED; plain code, compare actual clipboard before clearing |
-| Clipboard expiry preferences | WORKING persistence, Settings | Five durations; filesystem failures swallowed | NOT IMPLEMENTED; worker + validated atomic settings |
-| Credential context menu | UNKNOWN device flow, window | Copy, Calculate, Choose icon, Delete; mouse-only | NOT IMPLEMENTED; context + keyboard entry points share commands |
-| Delete with irreversible warning | UNKNOWN, dialogs | Confirm then worker deletes raw name | NOT IMPLEMENTED; require connected/unlocked device and explicit confirm |
-| Service color avatars / custom icon / Reset | WORKING mapping tests, icons/dialogs | 31 built-in labels/colors; selection has little feedback | NOT IMPLEMENTED; retain keys and accessible selected state |
-| Favicon customization + cache | PARTIAL/Flatpak BROKEN, window | Privacy/path/bounds/retry defects above | NOT IMPLEMENTED; opt-in only, validated domains, bounded cached images |
-| Device firmware and counts | UNKNOWN, Key Info | Identifies model as firmware major (not actual product identity) | NOT IMPLEMENTED; show OATH firmware honestly |
-| Follow System / Light / Dark | WORKING, `prefs.rs` | Dynamic GTK theme; explicit choice persisted | NOT IMPLEMENTED; system media query + live explicit theme |
-| About, website, issue URL, license | WORKING source/menu, dialogs | Hardcoded version; inherited GTK About behavior | NOT IMPLEMENTED; derive Cargo version, native app menus on macOS |
-| Quit / window lifecycle | WORKING, menu | Window size/position not persisted | NOT IMPLEMENTED; window state and conventional accelerators |
-| Keyboard shortcuts / drag and drop | NOT IMPLEMENTED baseline | Add shortcuts and QR image drop where supported | NOT IMPLEMENTED; Ctrl/Cmd platform convention |
-| Windows / macOS packages | NOT IMPLEMENTED | No installer/bundle or QA | NOT IMPLEMENTED; MSI, app bundle, platform CI |
-| Flatpak / Linux release packages | PARTIAL, manifests/scripts | Existing x86_64 Rust archive only; README incorrectly describes SDK extension; RPM/DEB omit license material | NOT IMPLEMENTED; offline locked sources, both architectures, sandbox QA |
+| Credentials / Key Info / Settings navigation | WORKING, `ui/window.rs` | Three tabs, responsive header/bottom switcher | VERIFIED Linux X11: navigation/accessibility smoke; shared Dioxus components |
+| Connect / Retry / disconnect | PARTIAL, worker + connection | First reader with OATH; no hotplug retry; errors can leave stale session | MIGRATED `services/runtime.rs`, `connection.rs`: retry, presence polling, explicit disconnect; no-device UI verified, hotplug hardware gate |
+| Password unlock | UNKNOWN, `oath.rs`, dialogs | Password-derived key currently 20 bytes, Yubico uses 16; advertised HMAC algorithm ignored; ordinary equality | MIGRATED `oath.rs`: 16-byte key, advertised HMAC, constant-time proof; protocol regression verified; hardware gate |
+| Set/change/remove password | UNKNOWN, `oath.rs` | Minimum four characters in UI; password-protection state stays stale | MIGRATED `oath.rs`, dialogs: protection state updates, confirmation; protocol regression verified; hardware gate |
+| Require PIN on launch | DEAD, `prefs.rs`, Settings | Persisted/displayed but never read during connection; cannot secure an unprotected key | MIGRATED runtime/UI protected-key prompt; preferences persistence verified; locked-key hardware gate |
+| List credentials and issuer/account | UNKNOWN, `oath.rs` | Unsupported type/algorithm silently default; malformed TLV tails ignored | MIGRATED strict list/SELECT/TLV parsing; malformed-response tests verified; real key gate |
+| TOTP calculation + countdown | UNKNOWN, `oath.rs`, window timer | Every 30 seconds; custom periods ignored | MIGRATED credential periods/expiry in runtime; custom-period protocol tests verified; hardware countdown gate |
+| HOTP calculation | PARTIAL, worker / row | Counter imported then discarded; HOTP tagged as touch by calculate-all | MIGRATED explicit HOTP Generate; counter 42 regression verified; real counter/touch gate |
+| Touch-required credentials | PARTIAL, worker/dialog | Touch status conflated with HOTP; modal arrives after attempted calculation, cancellation does not cancel PC/SC | MIGRATED background touch prompt and generation cancellation; cannot interrupt every native transmit or undo HOTP; hardware gate |
+| Search/filter | WORKING software, `ui/state.rs` | ASCII lowercase only; empty filtered list misleadingly says no credentials | MIGRATED Unicode state filtering/distinct empty state; reducer tests verified; populated UI hardware gate |
+| Add issuer/account/secret/type/algorithm/digits/touch | PARTIAL, `add_page.rs` | Submission closes and clears before success; invalid/empty secret validation inconsistent; disconnected form can submit | MIGRATED validated form retained until success; all available fields and disabled disconnected Save verified in Linux UI |
+| HOTP initial counter | BROKEN import, `add_page.rs` | Always writes zero; no editable counter | VERIFIED parser/form/protocol counter 42; actual YubiKey counter gate |
+| Nondefault TOTP periods | BROKEN import, `qr.rs` / form | Parser accepts then form discards; period prefix not interpreted in names | VERIFIED URI/form/protocol 60-second period and UTF-8 name; actual code timing gate |
+| QR file import | PARTIAL, `qr.rs` | PNG/JPEG/WebP; only first QR, blocking/unbounded decode | MIGRATED bounded worker decode/native portal picker/file drop; actual QR image tests verified; dialog/drop QA pending |
+| Pasted otpauth URI | PARTIAL, `qr.rs` | UTF-8 corruption, duplicate/invalid values accepted, issuer mismatch ignored | VERIFIED strict parser regression and actual Unicode URI paste into Linux UI |
+| Copy code / transient copied feedback | PARTIAL, row + clipboard | Copies formatted code with spaces; expiry overwrites unrelated newer clipboard contents | MIGRATED plain codes/expiry validation; native clipboard ownership, expiry and shutdown tests verified; device Copy gate |
+| Clipboard expiry preferences | WORKING persistence, Settings | Five durations; filesystem failures swallowed | VERIFIED all five selectors and atomic persistence in Linux UI; legacy unknown fields retained |
+| Credential context menu | UNKNOWN device flow, window | Copy, Calculate, Choose icon, Delete; mouse-only | MIGRATED shared commands, row Enter/Shift+F10/context actions; populated device UI gate |
+| Delete with irreversible warning | UNKNOWN, dialogs | Confirm then worker deletes raw name | MIGRATED explicit irreversible confirmation and exact raw identifier; hardware gate |
+| Service color avatars / custom icon / Reset | WORKING mapping tests, icons/dialogs | 31 built-in labels/colors; selection has little feedback | MIGRATED 31 service keys/colors, accessible selection/reset; mapping tests verified; device icon dialog gate |
+| Favicon customization + cache | PARTIAL/Flatpak BROKEN, window | Privacy/path/bounds/retry defects above | MIGRATED opt-in HTTPS, validated domains, bounded PNG normalization and hashed cache with legacy fallback; device/cache/network UI gate |
+| Device firmware and counts | UNKNOWN, Key Info | Identifies model as firmware major (not actual product identity) | MIGRATED OATH firmware and counts; no fabricated product model; actual device gate |
+| Follow System / Light / Dark | WORKING, `prefs.rs` | Dynamic GTK theme; explicit choice persisted | VERIFIED Linux live Light/Dark/System selectors and settings persistence; OS/Wayland appearance gates |
+| About, website, issue URL, license | WORKING source/menu, dialogs | Hardcoded version; inherited GTK About behavior | VERIFIED Linux About content/Cargo version; native menus and HTTPS links implemented; browser/platform gates |
+| Quit / window lifecycle | WORKING, menu | Window size/position not persisted | MIGRATED window state, native close/quit and clipboard shutdown; resize/clipboard tests verified; lifecycle/platform gates |
+| Keyboard shortcuts / drag and drop | NOT IMPLEMENTED baseline | Add shortcuts and QR image drop where supported | MIGRATED Ctrl/Cmd shortcuts and native QR drop; Linux Ctrl+N/Escape verified; remaining OS/drop gates |
+| Windows / macOS packages | NOT IMPLEMENTED | No installer/bundle or QA | MIGRATED WiX MSI and signed app-bundle scripts plus native CI jobs; actual artifacts/CI pending |
+| Flatpak / Linux release packages | PARTIAL, manifests/scripts | Existing x86_64 Rust archive only; README incorrectly describes SDK extension; RPM/DEB omit license material | MIGRATED native tar/DEB/RPM, both Flatpak architectures/offline lock sources, notices; local optimized/RPM build verified; sandbox/artifact gates pending |
 
 ## Existing tests and important bugs
 
@@ -154,7 +154,7 @@ security model while removing its toolkit-specific callback architecture.
 
 - [x] Baseline built and launched; original source and data formats audited.
 - [x] Feature inventory and known limitations recorded before rewriting.
-- [ ] New architecture documented and implemented.
+- [x] New architecture documented and implemented (ARCHITECTURE.md).
 - [ ] Each inventory row has a concrete implementation and regression evidence.
 - [ ] New Linux UI launched and every available control exercised.
 - [ ] Windows and macOS CI builds and native QA recorded separately.
@@ -164,3 +164,33 @@ security model while removing its toolkit-specific callback architecture.
 
 Do not check external platform/hardware boxes on the basis of mocks or source
 inspection. Record each blocked operation and its precise prerequisite.
+
+## Evidence and deliberate differences (2026-10-02)
+
+The Dioxus frontend is now canonical. Uncompiled GTK widgets, old preferences,
+clipboard/worker duplicates and the placeholder C CodeQL file were removed after
+software feature comparison and real Linux UI checks. The original code remains
+in Git and the local reference snapshot. Historical binary distributions and the
+old screenshot were removed from the source checkout; generated artifacts belong
+in CI/release storage. This cleanup does not claim physical-device parity.
+
+Touch cancellation discards late results; PC/SC calls and hardware HOTP counter
+increments cannot always be cancelled. Favicons require explicit consent instead
+of disclosing inferred account domains automatically. Duplicate Add refuses
+overwrite instead of replacing secrets silently. A custom legacy cache file is
+read only after hostname/image validation; new cache filenames use SHA-256 to
+avoid Windows reserved names and case collisions. Model labels now report OATH
+firmware rather than guessing a YubiKey model from its major version. No useful
+workflow has been intentionally removed.
+
+Software evidence: library/protocol/real QR-image tests, settings compatibility
+and corruption/atomic-write tests, isolated native clipboard expiry/replacement/
+shutdown test, and accessibility-driven Linux UI checks. The latter exercises
+all available no-device navigation, all preferences, About, add-form fields,
+Unicode URI paste, HOTP counter/digits/algorithm, Ctrl+N/Escape and 420-pixel
+resizing. Generated QR and protocol fixtures exist only in tests. Production
+connects to real PC/SC and displays no fabricated credential data.
+
+Hardware-dependent dialogs/actions, Windows/macOS full interaction, Wayland,
+high DPI/Retina, portal/drop integration and complete sandbox QA remain open
+until their evidence is recorded in QA.md and PLATFORM_SUPPORT.md.

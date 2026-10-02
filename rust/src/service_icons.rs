@@ -237,7 +237,13 @@ pub fn guess_domain(issuer: Option<&str>, account: &str) -> Option<String> {
 pub fn extract_domain_from_text(text: &str) -> Option<String> {
     let cleaned = text.trim().to_ascii_lowercase();
     if cleaned.contains('.') && !cleaned.contains(' ') {
-        Some(cleaned.trim_start_matches("https://").trim_start_matches("http://").trim_end_matches('/').to_string())
+        Some(
+            cleaned
+                .trim_start_matches("https://")
+                .trim_start_matches("http://")
+                .trim_end_matches('/')
+                .to_string(),
+        )
     } else {
         None
     }

@@ -4,6 +4,8 @@ runtime-version: "50"
 sdk: org.gnome.Sdk
 command: gosh-authenticator
 finish-args:
+  # Only explicit, opt-in favicon requests use network access.
+  - --share=network
   - --share=ipc
   - --socket=fallback-x11
   - --socket=wayland
@@ -22,6 +24,21 @@ build-options:
   env:
     CARGO_NET_OFFLINE: "true"
 modules:
+  # Dioxus Desktop's Linux native menu/clipboard integration links libxdo.
+  # Build the library only; no xdotool executable is part of the application.
+  - name: libxdo
+    buildsystem: simple
+    build-commands:
+      - make PREFIX=/app libxdo.so
+      - make PREFIX=/app installlib installheader installpc
+      - install -Dm644 COPYRIGHT /app/share/licenses/com.goshapps.YubicoAuthenticator/libxdo-COPYRIGHT
+    sources:
+      - type: archive
+        url: https://codeload.github.com/jordansissel/xdotool/tar.gz/refs/tags/v3.20211022.1
+        sha256: 82b15a944a5e82fee15e0f6116bd9f642bc3d0bb6989fc0ca5ad9dfe35de0847
+        archive-type: tar-gzip
+        dest-filename: xdotool-3.20211022.1.tar.gz
+
   - name: pcsc-lite
     buildsystem: meson
     config-opts:
@@ -41,12 +58,14 @@ modules:
       - /lib64/libpcsclite.so
     sources:
       - type: archive
-        url: https://pcsclite.apdu.fr/files/pcsc-lite-2.5.1.tar.xz
-        sha256: bfcfe38a20afc49849c6bf55325e38f449fc4b26d3923fdc32b969ae41a8741b
+        url: https://codeload.github.com/LudovicRousseau/PCSC/tar.gz/refs/tags/2.5.1
+        sha256: 78cd514e1b549292696a5c549d42d69a44fd084aa06ccd1af2ff6c2208282581
+        archive-type: tar-gzip
+        dest-filename: pcsc-lite-2.5.1.tar.gz
         x-checker-data:
           type: anitya
           project-id: 2611
-          url-template: https://pcsclite.apdu.fr/files/pcsc-lite-$version.tar.xz
+          url-template: https://codeload.github.com/LudovicRousseau/PCSC/tar.gz/refs/tags/$version
 
   - name: gosh-authenticator
     buildsystem: simple
@@ -76,6 +95,13 @@ modules:
         strip-components: 1
         only-arches:
           - x86_64
+      - type: archive
+        url: https://static.rust-lang.org/dist/2026-08-20/rust-1.98.0-aarch64-unknown-linux-gnu.tar.xz
+        sha256: ac9283184301aeed06ecc9f5aa4c1be7041e18a1b197b6cb6c5d162d98f566da
+        dest: toolchain
+        strip-components: 1
+        only-arches:
+          - aarch64
       - type: dir
         path: rust/src
         dest: rust/src

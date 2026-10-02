@@ -1,66 +1,78 @@
-mod clipboard;
-mod prefs;
-mod qr;
-mod service_icons;
+#![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 mod ui;
-
-use std::path::PathBuf;
-
-use adw::prelude::*;
-use gtk::prelude::*;
-
-use crate::prefs::{apply_theme, Prefs, APP_ID};
-
+use gosh_authenticator_core::{
+    services::Runtime,
+    settings::{Settings, SettingsStore, APP_NAME},
+};
+#[derive(Clone)]
+struct Startup {
+    settings: Settings,
+    runtime: Runtime,
+    error: Option<String>,
+    settings_path: std::path::PathBuf,
+}
 fn main() {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
-        .format_timestamp_secs()
-        .init();
-
-    let app = adw::Application::builder().application_id(APP_ID).build();
-    app.connect_startup(|_| {
-        load_css();
-        add_icon_search_paths();
-        apply_theme(Prefs::load().theme_mode);
-    });
-    app.connect_activate(ui::build_ui);
-    std::process::exit(app.run().into());
-}
-
-fn load_css() {
-    let provider = gtk::CssProvider::new();
-    provider.load_from_string(include_str!("style.css"));
-    if let Some(display) = gtk::gdk::Display::default() {
-        gtk::style_context_add_provider_for_display(
-            &display,
-            &provider,
-            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
-        );
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
+    let mut args = std::env::args().skip(1);
+    let mut settings_path = None;
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            "--version" => {
+                println!("{APP_NAME} {}", env!("CARGO_PKG_VERSION"));
+                return;
+            }
+            "--help" | "-h" => {
+                println!("{APP_NAME}\nUsage: gosh-authenticator [--settings PATH] [--version] [--help]\nSecrets remain on the YubiKey; --settings selects a diagnostic configuration file.");
+                return;
+            }
+            "--settings" => match args.next() {
+                Some(path) => settings_path = Some(path.into()),
+                None => {
+                    eprintln!("--settings requires a file path");
+                    std::process::exit(2);
+                }
+            },
+            _ => {
+                eprintln!("Unknown option: {arg}");
+                std::process::exit(2);
+            }
+        }
     }
-}
-
-fn add_icon_search_paths() {
-    let Some(display) = gtk::gdk::Display::default() else {
-        return;
+    let store = match settings_path {
+        Some(path) => SettingsStore { path },
+        None => match SettingsStore::standard() {
+            Ok(store) => store,
+            Err(e) => {
+                eprintln!("Cannot start: {e}");
+                std::process::exit(1);
+            }
+        },
     };
-    let theme = gtk::IconTheme::for_display(&display);
-    let mut paths = Vec::new();
-
-    if let Ok(manifest) = std::env::var("CARGO_MANIFEST_DIR") {
-        paths.push(PathBuf::from(manifest).join("../data/icons"));
-    }
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(dir) = exe.parent() {
-            paths.push(dir.join("../share/icons"));
-            paths.push(dir.join("share/icons"));
+    let (settings, error) = match store.load() {
+        Ok(settings) => (settings, None),
+        Err(e) => (
+            Settings::default(),
+            Some(format!(
+                "{e}. The original file is preserved; preferences cannot overwrite it."
+            )),
+        ),
+    };
+    let config = match gosh_authenticator_core::platform::config(&settings, &store) {
+        Ok(config) => config,
+        Err(e) => {
+            eprintln!("Cannot create desktop window: {e}");
+            std::process::exit(1);
         }
-    }
-    paths.push(PathBuf::from("/app/share/icons"));
-    paths.push(PathBuf::from("/usr/share/icons"));
-    paths.push(PathBuf::from("/usr/local/share/icons"));
-
-    for path in paths {
-        if path.exists() {
-            theme.add_search_path(path);
-        }
-    }
+    };
+    let settings_path = store.path.clone();
+    let runtime = Runtime::start(store);
+    dioxus::LaunchBuilder::desktop()
+        .with_cfg(config)
+        .with_context(Startup {
+            settings,
+            runtime,
+            error,
+            settings_path,
+        })
+        .launch(ui::App);
 }

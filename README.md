@@ -1,108 +1,47 @@
-# Gosh Yubico Authenticator for Linux
+# Gosh Yubico Authenticator
 
-A native GTK 4 / Adwaita desktop application for managing OATH (TOTP/HOTP)
-credentials on YubiKey devices.
+A Rust and Dioxus Desktop application for managing OATH credentials on a YubiKey.
+The 2.0 migration targets Windows, macOS and Linux, including Flatpak. Credentials
+stay on the hardware key; the app uses the operating system's smart-card service.
 
-Gosh Yubico Authenticator is an independent application and is not affiliated
-with or endorsed by Yubico. Yubico and YubiKey are trademarks of Yubico AB.
+**2.0.0-alpha.1 is a migration prerelease.** Linux software/runtime validation is
+underway; native Windows/macOS, real-key interoperability and distribution signing
+must be verified before a stable release. See [platform evidence](PLATFORM_SUPPORT.md)
+and the [QA record](QA.md). Existing 1.x releases use the historical GTK frontend.
 
-## Features
+![Running Linux application, no key attached](screenshots/linux-credentials-light.png)
 
-Manage OATH credentials with TOTP/HOTP code generation, password-protected
-YubiKeys, touch-required credentials, clipboard auto-clear, QR import, and
-system / light / dark theme support.
+The app supports TOTP/HOTP, password unlock and protection changes, physical-touch
+requests, search, manual credential entry, OTP URI paste and QR image import.
+Custom periods and HOTP counters are preserved. Codes copy without spaces and
+clear after the selected timeout while the clipboard still contains that code.
+Settings include system/light/dark appearance, unlock prompting, service avatars
+and optional favicon requests. Favicons are opt-in; account domains are never
+sent automatically. Native menus, Ctrl/Cmd shortcuts and resizable layouts share
+one command system. USB and touch behavior still require real-key QA.
 
-## Screenshots
+![Actual Linux settings in dark mode](screenshots/linux-settings-dark.png)
 
-![Gosh Yubico Authenticator – Credentials View](screenshots/img1.png)
+Build and packaging instructions are in [BUILDING.md](BUILDING.md). Windows uses
+WebView2 and WinSCard; macOS uses WKWebView and PCSC; Linux uses WebKitGTK 4.1 and
+pcsc-lite. There is no Node/Electron runtime or frontend development server.
+Linux users must start the host PC/SC daemon and enable the key's CCID interface.
+The Flatpak manifest supports x86_64 and aarch64 with pinned, offline Cargo inputs.
 
-## Quick Start
+The release workflow builds Windows MSI, Intel/Apple Silicon .app zip bundles,
+Linux tar.gz/DEB/RPM and Flatpak bundles. These are advertised as verified downloads
+only after the workflow succeeds and the artifacts are inspected. Windows MSI
+requires WebView2; macOS bundles are currently ad-hoc signed and not notarized.
+Linux tarballs require the system runtime libraries. No 2.0 stable release has
+been published by this migration.
 
-**Prerequisites:** Install `pcscd` (PC/SC Smart Card Daemon) for YubiKey
-communication.
+Linux preferences retain the legacy `gosh-authenticator/settings.json` path and
+field names. New optional fields have defaults; unknown fields survive saves.
+Malformed files remain intact with a visible error. Windows/macOS use their
+standard configuration directories. Passwords, OTP secrets and codes are not
+saved in preferences. See [ARCHITECTURE.md](ARCHITECTURE.md),
+[MIGRATION_AUDIT.md](MIGRATION_AUDIT.md) and [SECURITY.md](SECURITY.md).
 
-```bash
-# Fedora/RHEL
-sudo dnf install pcsc-lite
-
-# Ubuntu/Debian
-sudo apt install pcscd
-
-# Arch Linux
-sudo pacman -S pcsclite
-```
-
-**Enable and start the daemon:**
-
-```bash
-sudo systemctl enable --now pcscd
-```
-
-**Install the Flatpak (recommended):**
-
-```bash
-# From a release bundle:
-flatpak install --user ./com.goshapps.YubicoAuthenticator.flatpak
-flatpak run com.goshapps.YubicoAuthenticator
-
-# Or build and install from this repository:
-./build-flatpak.sh
-```
-
-The Flatpak talks to the **host** `pcscd` over the `pcsc` socket. Keep the
-daemon running on the host; do not expect a daemon inside the sandbox.
-
-**Other packages:**
-
-```bash
-# From a release tarball:
-./gosh-authenticator
-
-# Distro packages:
-sudo dnf install gosh-authenticator-*.rpm
-sudo apt install ./gosh-authenticator_*.deb
-```
-
-## Building from Source
-
-**Build dependencies:** Rust 1.70+, GTK 4, libadwaita, libpcsclite-dev
-
-```bash
-# Ubuntu/Debian
-sudo apt install build-essential pkg-config libgtk-4-dev libadwaita-1-dev libpcsclite-dev pcscd
-
-# Fedora
-sudo dnf install gcc pkgconf-pkg-config gtk4-devel libadwaita-devel pcsc-lite-devel
-
-# Build the native binary
-cd rust
-cargo build --release
-./target/release/gosh-authenticator
-```
-
-**Flatpak from source:**
-
-```bash
-sudo apt install flatpak flatpak-builder elfutils librsvg2-common
-./build-flatpak.sh
-```
-
-`./build-flatpak.sh` installs the GNOME 50 SDK and the `rust-stable` extension
-from Flathub, builds `com.goshapps.YubicoAuthenticator`, installs it for
-the current user, and writes a `.flatpak` bundle under `dist/`.
-
-If you change Rust dependencies, regenerate the offline crate sources:
-
-```bash
-python3 flatpak/generate-cargo-sources.py
-```
-
-## Troubleshooting
-
-**PC/SC service not running:** Start with `sudo systemctl start pcscd`
-
-**YubiKey not detected:** Check with `pcsc_scan` or verify pcscd is running
-
-## License
-
-GPL-3.0-or-later
+GPL-3.0-or-later. [LICENSE](LICENSE) and [THIRD_PARTY_LICENSES.html](THIRD_PARTY_LICENSES.html)
+ship in native packages and Flatpak. This independent application is **not affiliated
+with or endorsed by Yubico**. Yubico and YubiKey are trademarks of Yubico AB.
