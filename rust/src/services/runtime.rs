@@ -283,7 +283,9 @@ impl Worker {
                     }
                 }
             }
-            Command::UpdateSettings(settings) => {
+            Command::UpdateSettings(update) => {
+                let mut settings = self.settings.clone();
+                update.apply_to(&mut settings);
                 self.store
                     .save(&settings)
                     .map_err(|e| YubiKeyError::Generic(e.to_string()))?;
@@ -532,6 +534,7 @@ fn normalize_icon(bytes: &[u8]) -> Result<Vec<u8>, YubiKeyError> {
 mod tests {
     use super::*;
     use crate::core::yubikey::{connection::OathConnection, error::Result, Algorithm, OathType};
+    use crate::settings::{IconPreference, SettingsUpdate, ThemeMode, WindowState};
 
     struct RemovedCard;
     impl OathConnection for RemovedCard {
@@ -613,6 +616,74 @@ mod tests {
         });
         assert!(matches!(events.recv_blocking().unwrap(), Event::Cancelled));
         assert!(events.try_recv().is_err());
+    }
+    #[test]
+    fn preference_edits_survive_delayed_events_and_interleaved_window_saves() {
+        let dir = tempfile::tempdir().unwrap();
+        let (mut worker, _events) = worker(dir.path().join("settings.json"));
+        worker
+            .settings
+            .extra
+            .insert("future_setting".into(), serde_json::json!({"v": 1}));
+        worker.store.save(&worker.settings).unwrap();
+        let window = WindowState {
+            width: 1100.,
+            height: 800.,
+            maximized: true,
+        };
+        let icon = IconPreference {
+            custom_icon_key: Some("github".into()),
+            favicon_domain: None,
+        };
+        // Leave every SettingsSaved acknowledgement unread, as when the UI
+        // sends several edits before processing the worker's event queue.
+        for update in [
+            SettingsUpdate::ThemeMode(ThemeMode::Dark),
+            SettingsUpdate::Window(window.clone()),
+            SettingsUpdate::ClipboardTimeout(120),
+            SettingsUpdate::RequirePinOnLaunch(true),
+            SettingsUpdate::Icon {
+                key: "first".into(),
+                preference: Some(icon.clone()),
+            },
+            SettingsUpdate::AllowFavicons(true),
+            SettingsUpdate::Icon {
+                key: "second".into(),
+                preference: Some(icon.clone()),
+            },
+            SettingsUpdate::Window(window.clone()),
+            SettingsUpdate::Icon {
+                key: "first".into(),
+                preference: None,
+            },
+        ] {
+            worker.execute(Command::UpdateSettings(update)).unwrap();
+        }
+        let saved = worker.store.load().unwrap();
+        assert_eq!(saved, worker.settings);
+        assert_eq!(saved.theme_mode, ThemeMode::Dark);
+        assert_eq!(saved.clipboard_timeout_seconds, 120);
+        assert!(saved.require_pin_on_launch && saved.allow_favicons);
+        assert_eq!(saved.window, window);
+        assert_eq!(saved.icon_prefs.len(), 1);
+        assert_eq!(saved.icon_prefs["second"], icon);
+        assert_eq!(saved.extra["future_setting"], serde_json::json!({"v": 1}));
+    }
+    #[test]
+    fn invalid_preference_edit_preserves_saved_and_worker_settings() {
+        let dir = tempfile::tempdir().unwrap();
+        let (mut worker, _events) = worker(dir.path().join("settings.json"));
+        worker
+            .execute(Command::UpdateSettings(SettingsUpdate::ThemeMode(
+                ThemeMode::Dark,
+            )))
+            .unwrap();
+        let previous = worker.settings.clone();
+        assert!(worker
+            .execute(Command::UpdateSettings(SettingsUpdate::ClipboardTimeout(0)))
+            .is_err());
+        assert_eq!(worker.settings, previous);
+        assert_eq!(worker.store.load().unwrap(), previous);
     }
     #[test]
     fn favicon_normalization_rejects_oversize_and_corrupt_images() {

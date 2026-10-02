@@ -72,6 +72,38 @@ impl Default for Settings {
         }
     }
 }
+/// Individual edits are merged into the worker's latest settings, so pending
+/// saves from another control or window resize cannot replace unrelated fields.
+pub enum SettingsUpdate {
+    ThemeMode(ThemeMode),
+    ClipboardTimeout(u32),
+    RequirePinOnLaunch(bool),
+    AllowFavicons(bool),
+    Window(WindowState),
+    Icon {
+        key: String,
+        preference: Option<IconPreference>,
+    },
+}
+impl SettingsUpdate {
+    pub(crate) fn apply_to(self, settings: &mut Settings) {
+        match self {
+            Self::ThemeMode(value) => settings.theme_mode = value,
+            Self::ClipboardTimeout(value) => settings.clipboard_timeout_seconds = value,
+            Self::RequirePinOnLaunch(value) => settings.require_pin_on_launch = value,
+            Self::AllowFavicons(value) => settings.allow_favicons = value,
+            Self::Window(value) => settings.window = value,
+            Self::Icon { key, preference } => match preference {
+                Some(value) => {
+                    settings.icon_prefs.insert(key, value);
+                }
+                None => {
+                    settings.icon_prefs.remove(&key);
+                }
+            },
+        }
+    }
+}
 impl Settings {
     pub fn icon_key(id: &[u8]) -> String {
         data_encoding::BASE64.encode(id)

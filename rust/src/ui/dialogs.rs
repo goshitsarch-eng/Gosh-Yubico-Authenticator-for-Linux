@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use gosh_authenticator_core::{
     app::Command,
     service_icons::all_services,
-    settings::{validated_domain, IconPreference, Settings, APP_NAME, APP_WEBSITE},
+    settings::{validated_domain, IconPreference, Settings, SettingsUpdate, APP_NAME, APP_WEBSITE},
 };
 use zeroize::Zeroize;
 #[component]
@@ -11,6 +11,7 @@ pub fn Dialogs() -> Element {
     let ui = use_context::<Ui>();
     let mut dialog = ui.dialog;
     let current = dialog();
+    let epoch = (ui.dialog_epoch)();
     if current == Dialog::None {
         return rsx! {};
     }
@@ -26,7 +27,7 @@ pub fn Dialogs() -> Element {
         Dialog::None => "",
     };
     rsx! {
-        div { class: "modal-backdrop",
+        div { key: "{epoch}", class: "modal-backdrop",
             div {
                 class: "modal",
                 role: "dialog",
@@ -365,9 +366,10 @@ fn IconPicker(id: gosh_authenticator_core::core::credential::CredentialId) -> El
         div { class: "form-actions",
             button {
                 onclick: move |_| {
-                    let mut settings = reset_ui.state.read().settings.clone();
-                    settings.icon_prefs.remove(&key);
-                    reset_ui.send(Command::UpdateSettings(settings));
+                    reset_ui.send(Command::UpdateSettings(SettingsUpdate::Icon {
+                        key: key.clone(),
+                        preference: None,
+                    }));
                     dialog.set(Dialog::None);
                 },
                 "Reset icon"
@@ -386,17 +388,13 @@ fn IconPicker(id: gosh_authenticator_core::core::credential::CredentialId) -> El
                             }
                         }
                     };
-                    let mut settings = ui.state.read().settings.clone();
-                    settings
-                        .icon_prefs
-                        .insert(
-                            save_key.clone(),
-                            IconPreference {
-                                custom_icon_key: selected(),
-                                favicon_domain: value,
-                            },
-                        );
-                    ui.send(Command::UpdateSettings(settings));
+                    ui.send(Command::UpdateSettings(SettingsUpdate::Icon {
+                        key: save_key.clone(),
+                        preference: Some(IconPreference {
+                            custom_icon_key: selected(),
+                            favicon_domain: value,
+                        }),
+                    }));
                     dialog.set(Dialog::None);
                 },
                 "Save icon"

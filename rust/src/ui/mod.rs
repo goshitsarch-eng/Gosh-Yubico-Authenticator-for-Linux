@@ -7,7 +7,7 @@ use gosh_authenticator_core::{
     app::{unix_time, Command, Connection, Event, Outcome, State},
     core::credential::CredentialId,
     services::Runtime,
-    settings::WindowState,
+    settings::{SettingsUpdate, WindowState},
 };
 #[derive(Clone, Copy, PartialEq)]
 pub enum Page {
@@ -28,11 +28,26 @@ pub enum Dialog {
     Touch,
     Actions(CredentialId),
 }
+impl Dialog {
+    fn is_invalidated_by(&self, event: &Event, state: &State) -> bool {
+        if matches!(self, Self::None | Self::About | Self::Licenses) {
+            return false;
+        }
+        match event {
+            Event::Disconnected => true,
+            Event::Connected(info, _) => {
+                state.device.as_ref().map(|device| device.id) != Some(info.id)
+            }
+            _ => false,
+        }
+    }
+}
 #[derive(Clone, Copy)]
 pub struct Ui {
     pub state: Signal<State>,
     pub page: Signal<Page>,
     pub dialog: Signal<Dialog>,
+    pub dialog_epoch: Signal<u64>,
     pub form: Signal<forms::AddForm>,
     pub now: Signal<u64>,
     pub runtime: Signal<Runtime>,
@@ -118,6 +133,7 @@ pub fn App() -> Element {
     });
     let mut page = use_signal(|| Page::Credentials);
     let mut dialog = use_signal(|| Dialog::None);
+    let mut dialog_epoch = use_signal(|| 0_u64);
     let mut form = use_signal(forms::AddForm::default);
     let mut now = use_signal(unix_time);
     let mut pending_window = use_signal(|| None::<WindowState>);
@@ -125,6 +141,7 @@ pub fn App() -> Element {
         state,
         page,
         dialog,
+        dialog_epoch,
         form,
         now,
         runtime: use_signal(|| startup.runtime.clone()),
@@ -139,6 +156,12 @@ pub fn App() -> Element {
         let events = events.clone();
         async move {
             while let Ok(event) = events.recv().await {
+                if dialog.read().is_invalidated_by(&event, &state.read()) {
+                    dialog.set(Dialog::None);
+                    // Force a fresh component if the next event immediately
+                    // opens Unlock again before Dioxus renders the closed state.
+                    dialog_epoch += 1;
+                }
                 match event {
                     Event::Imported(new) => {
                         form.set(forms::AddForm::from_credential(&new));
@@ -197,9 +220,7 @@ pub fn App() -> Element {
                 tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                 now.set(unix_time());
                 if let Some(window) = pending_window.write().take() {
-                    let mut settings = ui.state.read().settings.clone();
-                    settings.window = window;
-                    ui.send(Command::UpdateSettings(settings));
+                    ui.send(Command::UpdateSettings(SettingsUpdate::Window(window)));
                 }
             }
         }
@@ -232,9 +253,7 @@ pub fn App() -> Element {
                 }
                 WindowEvent::CloseRequested => {
                     if let Some(window) = pending_window.write().take() {
-                        let mut settings = window_ui.state.read().settings.clone();
-                        settings.window = window;
-                        window_ui.send(Command::UpdateSettings(settings));
+                        window_ui.send(Command::UpdateSettings(SettingsUpdate::Window(window)));
                     }
                     window_ui.quit();
                 }
@@ -423,6 +442,64 @@ pub fn App() -> Element {
                 }
             }
             dialogs::Dialogs {}
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gosh_authenticator_core::{app::DeviceInfo, settings::Settings};
+
+    fn connected(id: [u8; 8]) -> Event {
+        Event::Connected(
+            DeviceInfo {
+                version: (5, 7, 1),
+                id,
+                has_password: false,
+            },
+            false,
+        )
+    }
+
+    fn device_dialogs() -> [Dialog; 6] {
+        let id = CredentialId(b"issuer:account".to_vec());
+        [
+            Dialog::Unlock,
+            Dialog::Password,
+            Dialog::Delete(id.clone()),
+            Dialog::Icon(id.clone()),
+            Dialog::Touch,
+            Dialog::Actions(id),
+        ]
+    }
+
+    #[test]
+    fn key_removal_and_replacement_invalidate_every_device_dialog() {
+        let mut state = State::new(Settings::default());
+        state.apply(connected(*b"key-A-id"));
+        for dialog in device_dialogs() {
+            assert!(dialog.is_invalidated_by(&Event::Disconnected, &state));
+            // Key B may have the same credential ID as the dialog for key A.
+            assert!(dialog.is_invalidated_by(&connected(*b"key-B-id"), &state));
+        }
+        state.apply(Event::Disconnected);
+        for dialog in device_dialogs() {
+            assert!(dialog.is_invalidated_by(&connected(*b"key-B-id"), &state));
+        }
+    }
+
+    #[test]
+    fn same_key_metadata_updates_and_global_dialogs_remain_open() {
+        let mut state = State::new(Settings::default());
+        state.apply(connected(*b"key-A-id"));
+        for dialog in device_dialogs() {
+            assert!(!dialog.is_invalidated_by(&connected(*b"key-A-id"), &state));
+            assert!(!dialog.is_invalidated_by(&Event::Busy(false), &state));
+        }
+        for dialog in [Dialog::None, Dialog::About, Dialog::Licenses] {
+            assert!(!dialog.is_invalidated_by(&Event::Disconnected, &state));
+            assert!(!dialog.is_invalidated_by(&connected(*b"key-B-id"), &state));
         }
     }
 }

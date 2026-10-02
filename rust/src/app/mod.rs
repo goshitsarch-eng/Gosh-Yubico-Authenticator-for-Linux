@@ -1,6 +1,6 @@
 use crate::{
     core::credential::{Credential, CredentialId, NewCredential},
-    settings::Settings,
+    settings::{Settings, SettingsUpdate},
 };
 use zeroize::Zeroizing;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -27,7 +27,7 @@ pub enum Command {
     Disconnect,
     Import(std::path::PathBuf),
     Copy(CredentialId),
-    UpdateSettings(Settings),
+    UpdateSettings(SettingsUpdate),
     FetchIcon(String),
     Shutdown,
 }

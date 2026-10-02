@@ -11,10 +11,21 @@ from required checks instead of presenting source inspection as runtime proof.
 - Rust software tests exercise APDU/TLV parsing, Yubico authentication, touch
   encoding, duplicate protection, password removal state, Unicode URI parsing,
   HOTP counters, nondefault periods, real QR image decoding and bounded inputs.
-  The final all-features and headless runs each pass 39 software tests; the
+  Before the review follow-up, all-features and headless runs each passed 39 software tests; the
   separately executed native clipboard test brings the total to 40 unique Rust
   tests. The physical connection test remains ignored. Thirteen Python metadata
   and release/package validation tests pass. Rustfmt and strict Clippy pass.
+- The review follow-up adds four regression tests. The current desktop run
+  passes 43 software tests, and the headless run passes 41; Rustfmt and strict
+  desktop/headless Clippy pass. Device dialogs close on removal or a changed
+  device identity, with a fresh component for an immediately reopened unlock
+  prompt. Serialized field-level preference edits preserve unrelated settings,
+  interleaved window saves, icon edits and unknown fields while acknowledgements
+  remain unread. Invalid edits preserve both worker state and the saved file.
+  The rebuilt native desktop also passed the real controls smoke, including
+  all preference selectors/toggles, legacy persistence, navigation, About,
+  credential fields, shortcuts, narrow resizing and clean Quit. Physical key
+  swaps still require hardware QA.
 - Legacy settings fields and unknown fields survive round trips; malformed files
   remain intact; atomic saves work with Unicode paths, spaces and CRLF JSON.
 - Real Linux desktop smoke exercised no-device state, Retry, navigation, About,
@@ -40,6 +51,10 @@ from required checks instead of presenting source inspection as runtime proof.
   has been fabricated.
 
 ## Artifact and workflow evidence
+
+The package and performance evidence below was collected at migration commit
+`39ebe3d`, before the dialog and preference review fixes. These artifacts were
+not rebuilt for that follow-up.
 
 - Optimized Linux tar.gz, DEB and RPM were produced, extracted and inspected for
   executable, icon/desktop/AppStream metadata and first/third-party licenses.
@@ -88,7 +103,7 @@ no-reader service, were measured using `scripts/measure-linux.py`. Readiness is
 when an AT-SPI client observes the no-device label; PSS sums the app process tree
 two seconds later. Both builds are debug builds; these are development results,
 not release, GPU, high-DPI or populated-key performance claims.
-The final UI revision was measured again; [raw samples and binary/source
+UI revision `39ebe3d` was measured again; [raw samples and binary/source
 digests](evidence/linux-debug-performance-2026-10-02.json) record this run.
 
 | Build | Median observed readiness | Median process-tree PSS | Processes |

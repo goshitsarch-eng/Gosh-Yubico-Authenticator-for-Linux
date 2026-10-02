@@ -2,7 +2,7 @@ use super::{Dialog, Ui};
 use dioxus::prelude::*;
 use gosh_authenticator_core::{
     app::{Command, Connection},
-    settings::ThemeMode,
+    settings::{SettingsUpdate, ThemeMode},
 };
 #[component]
 pub fn Preferences() -> Element {
@@ -27,13 +27,12 @@ pub fn Preferences() -> Element {
                     "aria-label": "Theme",
                     value: settings.theme_mode.css(),
                     onchange: move |e| {
-                        let mut s = theme_ui.state.read().settings.clone();
-                        s.theme_mode = match e.value().as_str() {
+                        let theme = match e.value().as_str() {
                             "light" => ThemeMode::Light,
                             "dark" => ThemeMode::Dark,
                             _ => ThemeMode::System,
                         };
-                        theme_ui.send(Command::UpdateSettings(s));
+                        theme_ui.send(Command::UpdateSettings(SettingsUpdate::ThemeMode(theme)));
                     },
                     option { value: "system", selected: settings.theme_mode == ThemeMode::System, "Follow System" }
                     option { value: "light", selected: settings.theme_mode == ThemeMode::Light, "Light" }
@@ -54,9 +53,7 @@ pub fn Preferences() -> Element {
                     onchange: move |e| {
                         match e.value().parse() {
                             Ok(seconds) => {
-                                let mut s = clip_ui.state.read().settings.clone();
-                                s.clipboard_timeout_seconds = seconds;
-                                clip_ui.send(Command::UpdateSettings(s));
+                                clip_ui.send(Command::UpdateSettings(SettingsUpdate::ClipboardTimeout(seconds)));
                             }
                             Err(_) => clip_ui.error("Invalid clipboard timeout".into()),
                         }
@@ -76,9 +73,7 @@ pub fn Preferences() -> Element {
                     "aria-label": "Prompt to unlock on launch",
                     checked: settings.require_pin_on_launch,
                     onchange: move |e| {
-                        let mut s = prompt_ui.state.read().settings.clone();
-                        s.require_pin_on_launch = e.checked();
-                        prompt_ui.send(Command::UpdateSettings(s));
+                        prompt_ui.send(Command::UpdateSettings(SettingsUpdate::RequirePinOnLaunch(e.checked())));
                     },
                 }
             }
@@ -109,9 +104,7 @@ pub fn Preferences() -> Element {
                     "aria-label": "Allow optional favicon downloads",
                     checked: settings.allow_favicons,
                     onchange: move |e| {
-                        let mut s = favicon_ui.state.read().settings.clone();
-                        s.allow_favicons = e.checked();
-                        favicon_ui.send(Command::UpdateSettings(s));
+                        favicon_ui.send(Command::UpdateSettings(SettingsUpdate::AllowFavicons(e.checked())));
                     },
                 }
             }
