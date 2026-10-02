@@ -7,7 +7,7 @@
   <summary>Manage OATH credentials on YubiKey devices</summary>
   <description>
     <p>
-      Gosh Yubico Authenticator is a native GTK 4 / Adwaita desktop application for
+      Gosh Yubico Authenticator is a Rust and Dioxus Desktop application for
       managing OATH (TOTP and HOTP) credentials stored on YubiKey devices.
     </p>
     <p>
@@ -17,7 +17,7 @@
     <ul>
       <li>Generate TOTP and HOTP codes from credentials on the key</li>
       <li>Add credentials from a secret or by scanning a QR image</li>
-      <li>Protect the key with an OATH PIN and require touch when needed</li>
+      <li>Protect the key with an OATH password and require touch when needed</li>
       <li>Copy codes to the clipboard with automatic clearing</li>
       <li>Follow the system theme, or force light or dark</li>
     </ul>
@@ -52,6 +52,9 @@
     <color type="primary" scheme_preference="dark">#1c71d8</color>
   </branding>
   <releases>
+    <release version="2.0.0-alpha.1" date="2026-10-01" type="development">
+      <description><p>Dioxus Desktop migration prerelease with protocol, settings, clipboard and QR fixes. Platform and hardware QA remain in progress.</p></description>
+    </release>
     <release version="1.2.1" date="2026-08-24">
       <description>
         <p>Fail closed on malformed OATH device identity data and tighten Flatpak permissions.</p>

@@ -1,17 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
-# Build the Gosh Authenticator DEB package from the native GTK 4 binary.
+# Build the Gosh Authenticator DEB package from the Dioxus Desktop binary.
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 NAME="gosh-authenticator"
 
 VERSION_INPUT="${1:-${VERSION:-}}"
-if [ -z "$VERSION_INPUT" ] && command -v git >/dev/null 2>&1; then
-  TAG="$(git -C "$PROJECT_DIR" describe --tags --abbrev=0 2>/dev/null || true)"
-  VERSION_INPUT="${TAG#v}"
-fi
-VERSION_INPUT="${VERSION_INPUT:-1.2.1}"
+VERSION_INPUT="${VERSION_INPUT:-$(python3 -c 'import sys, tomllib; print(tomllib.load(open(sys.argv[1], "rb"))["package"]["version"])' "$PROJECT_DIR/rust/Cargo.toml")}"
+VERSION_INPUT="${VERSION_INPUT/-/\~}"
 
 ARCH_INPUT="${2:-${DEB_ARCH:-}}"
 if [ -z "$ARCH_INPUT" ]; then
@@ -36,12 +33,19 @@ if ! command -v dpkg-deb >/dev/null 2>&1; then
   exit 1
 fi
 
-BIN="$PROJECT_DIR/rust/target/release/gosh-authenticator"
+BIN="${GOSH_PACKAGE_BINARY:-$PROJECT_DIR/rust/target/release/gosh-authenticator}"
 if [ ! -x "$BIN" ]; then
   echo "ERROR: native binary not found at: $BIN" >&2
   echo "Build it first: (cd rust && cargo build --release)" >&2
   exit 1
 fi
+python3 - "$PROJECT_DIR" "$BIN" "$ARCH_INPUT" <<'PY'
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / 'scripts'))
+from package import validate_binary
+validate_binary(Path(sys.argv[2]), 'linux', {'amd64': 'x64', 'arm64': 'arm64'}[sys.argv[3]])
+PY
 
 OUT_NAME="${NAME}_${VERSION_INPUT}_${ARCH_INPUT}.deb"
 OUT_PATH="$PROJECT_DIR/dist/$OUT_NAME"
@@ -55,7 +59,11 @@ echo "===================================="
 STAGE_DIR="$(mktemp -d)"
 PKG_DIR="$STAGE_DIR/${NAME}_${VERSION_INPUT}_${ARCH_INPUT}"
 
+trap 'rm -rf "$STAGE_DIR"' EXIT
 mkdir -p "$PKG_DIR/DEBIAN"
+mkdir -p "$PKG_DIR/usr/share/doc/$NAME"
+install -m 0644 "$PROJECT_DIR/LICENSE" "$PKG_DIR/usr/share/doc/$NAME/copyright"
+install -m 0644 "$PROJECT_DIR/THIRD_PARTY_LICENSES.html" "$PKG_DIR/usr/share/doc/$NAME/THIRD_PARTY_LICENSES.html"
 mkdir -p "$PKG_DIR/usr/bin"
 mkdir -p "$PKG_DIR/usr/share/applications"
 mkdir -p "$PKG_DIR/usr/share/icons/hicolor/scalable/apps"
@@ -82,9 +90,10 @@ Section: utils
 Priority: optional
 Architecture: ${ARCH_INPUT}
 Maintainer: Builder <builder@localhost>
-Depends: libgtk-4-1, libadwaita-1-0, libpcsclite1
+Depends: libgtk-3-0, libwebkit2gtk-4.1-0, libjavascriptcoregtk-4.1-0, libxdo3, libpcsclite1
+Recommends: pcscd, libccid
 Description: Desktop app for managing OATH credentials on YubiKey
- Gosh Authenticator is a native GTK 4 / Adwaita Linux desktop application
+ Gosh Authenticator is a Rust / Dioxus Desktop desktop application
  for managing OATH (TOTP/HOTP) credentials on YubiKey devices.
 EOF
 chmod 0644 "$PKG_DIR/DEBIAN/control"
@@ -116,7 +125,8 @@ EOF
 chmod 0755 "$PKG_DIR/DEBIAN/postrm"
 
 mkdir -p "$PROJECT_DIR/dist"
-dpkg-deb --build "$PKG_DIR" "$OUT_PATH" >/dev/null
+chmod -R go+rX "$PKG_DIR"
+dpkg-deb --root-owner-group --build "$PKG_DIR" "$OUT_PATH" >/dev/null
 rm -rf "$STAGE_DIR"
 
 echo ""

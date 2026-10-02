@@ -1,0 +1,57 @@
+{
+  "measured_utc": "2026-10-02",
+  "os": "Debian 13 x86_64",
+  "desktop": "Xvfb X11 1280x1024",
+  "rust": "1.98.0",
+  "pcsc": "Real private pcsc-lite 2.3.3 daemon, no readers",
+  "build_profile": "debug",
+  "effective_cpu_limit": 4,
+  "method": "Three warm-cache samples. Readiness when AT-SPI observes the no-device label; process-tree PSS two seconds later. Includes probe overhead. Not release, hardware, scrolling or other-platform results.",
+  "baseline_commit": "8cc4be3537c6f054501a68b03784aae074a7ecff",
+  "baseline": {
+    "samples": [
+      {
+        "ready_seconds": 0.346,
+        "processes": 1,
+        "pss_mib": 92.4
+      },
+      {
+        "ready_seconds": 0.313,
+        "processes": 1,
+        "pss_mib": 92.7
+      },
+      {
+        "ready_seconds": 0.31,
+        "processes": 1,
+        "pss_mib": 92.9
+      }
+    ],
+    "median_ready_seconds": 0.313,
+    "median_pss_mib": 92.7,
+    "binary_sha256": "9f18bac4a0aaaf079e8718a95657fc91c4fbcdc529026cace8bfeab6495f4d1d"
+  },
+  "dioxus": {
+    "samples": [
+      {
+        "ready_seconds": 0.518,
+        "processes": 3,
+        "pss_mib": 332.5
+      },
+      {
+        "ready_seconds": 0.518,
+        "processes": 3,
+        "pss_mib": 330.2
+      },
+      {
+        "ready_seconds": 0.525,
+        "processes": 3,
+        "pss_mib": 331.9
+      }
+    ],
+    "median_ready_seconds": 0.518,
+    "median_pss_mib": 331.9,
+    "binary_sha256": "9da3945e8b19542dba86048580b0694f0100d80399b720c15e81174c6f8fbeb0"
+  },
+  "dioxus_source_sha256": "e48b0606ca51de350a59c776eb18d931d1a991e94ed119b72feba3cfb3d9c0df",
+  "source_digest_method": "SHA256 of sorted rust/src files, then Cargo.toml, Cargo.lock, LICENSE, THIRD_PARTY_LICENSES.html; each relative path and content followed by NUL."
+}

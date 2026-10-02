@@ -1,13 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
-# Build the Gosh Authenticator RPM package from the native GTK 4 sources.
+# Build the Gosh Authenticator RPM package from the Dioxus Desktop sources.
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 NAME="gosh-authenticator"
-VERSION_DEFAULT="1.2.1"
+VERSION_DEFAULT="$(python3 -c 'import sys, tomllib; print(tomllib.load(open(sys.argv[1], "rb"))["package"]["version"])' "$PROJECT_DIR/rust/Cargo.toml")"
 VERSION="${1:-${VERSION:-$VERSION_DEFAULT}}"
-TOPDIR="${RPMBUILD_TOPDIR:-$HOME/rpmbuild}"
+VERSION="${VERSION/-/\~}"
+TOPDIR="${RPMBUILD_TOPDIR:-$PROJECT_DIR/rpmbuild}"
+export CARGO_TARGET_DIR="$PROJECT_DIR/rust/target"
 
 echo "===================================="
 echo "Building Gosh Authenticator RPM"
@@ -28,15 +30,10 @@ mkdir -p "$TOPDIR"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
 echo "Creating source tarball..."
 TEMP_DIR=$(mktemp -d)
-cp -r "$PROJECT_DIR" "$TEMP_DIR/${NAME}-${VERSION}"
-cd "$TEMP_DIR"
-tar --exclude='.git' \
-    --exclude='rust/target' \
-    --exclude='dist' \
-    --exclude='*.swp' \
-    --exclude='*.kate-swp' \
-    -czf "$TOPDIR/SOURCES/${NAME}-${VERSION}.tar.gz" \
-    "${NAME}-${VERSION}"
+trap 'rm -rf "$TEMP_DIR"' EXIT
+mkdir -p "$TEMP_DIR/${NAME}-${VERSION}"
+tar -C "$PROJECT_DIR" --exclude='./.git' --exclude='./rust/target' --exclude='./dist' --exclude='./rpmbuild' --exclude='./.flatpak-builder' -cf - . | tar -C "$TEMP_DIR/${NAME}-${VERSION}" -xf -
+tar -C "$TEMP_DIR" -czf "$TOPDIR/SOURCES/${NAME}-${VERSION}.tar.gz" "${NAME}-${VERSION}"
 rm -rf "$TEMP_DIR"
 
 echo "Copying spec file..."

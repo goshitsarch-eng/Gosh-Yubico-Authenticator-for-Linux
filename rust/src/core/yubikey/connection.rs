@@ -5,7 +5,7 @@ use super::error::{Result, YubiKeyError};
 
 /// Connection to a YubiKey via PC/SC
 pub struct YubiKeyConnection {
-    card: Card,
+    card: std::cell::RefCell<Card>,
     /// OATH applet version (major, minor, patch)
     pub version: (u8, u8, u8),
     /// Device ID (8 bytes)
@@ -53,7 +53,7 @@ impl YubiKeyConnection {
                                 version.2
                             );
                             return Ok(Self {
-                                card,
+                                card: std::cell::RefCell::new(card),
                                 version,
                                 device_id,
                                 challenge,
@@ -86,7 +86,7 @@ impl YubiKeyConnection {
         Self::parse_select_response(response)
     }
 
-    fn parse_select_response(response: &[u8]) -> Result<SelectOathResponse> {
+    pub(crate) fn parse_select_response(response: &[u8]) -> Result<SelectOathResponse> {
         if response.len() < 2 {
             return Err(YubiKeyError::InvalidResponse("Response too short".into()));
         }
@@ -106,7 +106,7 @@ impl YubiKeyConnection {
         let mut algo = None;
 
         let mut parser = TlvParser::new(data);
-        while let Some(tlv) = parser.next() {
+        for tlv in parser.by_ref() {
             match Tag::from_byte(tlv.tag) {
                 Some(Tag::Version) if tlv.value.len() >= 3 => {
                     version = (tlv.value[0], tlv.value[1], tlv.value[2]);
@@ -130,10 +130,24 @@ impl YubiKeyConnection {
                     ));
                 }
                 Some(Tag::Challenge) => {
+                    if challenge.is_some() || tlv.value.len() != 8 {
+                        return Err(YubiKeyError::InvalidResponse(
+                            "Invalid authentication challenge".into(),
+                        ));
+                    }
                     challenge = Some(tlv.value.to_vec());
                 }
-                Some(Tag::Algorithm) if !tlv.value.is_empty() => {
-                    algo = apdu::Algorithm::from_byte(tlv.value[0]);
+                Some(Tag::Algorithm) => {
+                    if algo.is_some() || tlv.value.len() != 1 {
+                        return Err(YubiKeyError::InvalidResponse(
+                            "Invalid authentication algorithm".into(),
+                        ));
+                    }
+                    let parsed = apdu::Algorithm::from_byte(tlv.value[0])
+                        .filter(|a| *a as u8 == tlv.value[0]);
+                    algo = Some(parsed.ok_or_else(|| {
+                        YubiKeyError::InvalidResponse("Unsupported authentication algorithm".into())
+                    })?);
                 }
                 _ => {}
             }
@@ -160,7 +174,10 @@ impl YubiKeyConnection {
     /// Transmit an APDU and receive a response
     pub fn transmit(&self, apdu: &[u8]) -> Result<Vec<u8>> {
         let mut recv_buf = [0u8; MAX_BUFFER_SIZE];
-        let response = self.card.transmit(apdu, &mut recv_buf)?;
+        let mut card = self.card.borrow_mut();
+        let transaction = card.transaction()?;
+        let response = transaction.transmit(apdu, &mut recv_buf)?;
+        let mut frames = 0;
 
         if response.len() < 2 {
             return Err(YubiKeyError::InvalidResponse("Response too short".into()));
@@ -172,12 +189,23 @@ impl YubiKeyConnection {
         while full_response.len() >= 2 {
             let sw1 = full_response[full_response.len() - 2];
             if sw1 == sw::MORE_DATA {
+                frames += 1;
+                if frames > 64 || full_response.len() > 65536 {
+                    return Err(YubiKeyError::InvalidResponse(
+                        "Response exceeds safety limit".into(),
+                    ));
+                }
                 // Remove status bytes from accumulated response
                 full_response.truncate(full_response.len() - 2);
 
                 // Send GET REMAINING command
                 let remaining_apdu = apdu::build_send_remaining_apdu();
-                let more_response = self.card.transmit(&remaining_apdu, &mut recv_buf)?;
+                let more_response = transaction.transmit(&remaining_apdu, &mut recv_buf)?;
+                if more_response.len() < 2 {
+                    return Err(YubiKeyError::InvalidResponse(
+                        "Truncated continuation frame".into(),
+                    ));
+                }
                 full_response.extend_from_slice(more_response);
             } else {
                 break;
@@ -213,7 +241,10 @@ impl YubiKeyConnection {
         let mut atr_buf = [0u8; MAX_ATR_SIZE];
         let mut reader_names_buf = [0u8; 256];
 
-        let status = self.card.status2(&mut reader_names_buf, &mut atr_buf)?;
+        let status = self
+            .card
+            .borrow()
+            .status2(&mut reader_names_buf, &mut atr_buf)?;
 
         Ok(status.atr().to_vec())
     }
@@ -231,6 +262,62 @@ pub fn list_yubikey_readers() -> Result<Vec<String>> {
     Ok(reader_names)
 }
 
+/// Owned by a single device worker. Tests inject deterministic APDU responses.
+pub trait OathConnection: Send {
+    fn is_present(&self) -> Result<bool>;
+    fn version(&self) -> (u8, u8, u8);
+    fn device_id(&self) -> [u8; 8];
+    fn challenge(&self) -> Option<&[u8]>;
+    fn challenge_algorithm(&self) -> apdu::Algorithm {
+        apdu::Algorithm::Sha1
+    }
+    fn transmit(&self, command: &[u8]) -> Result<Vec<u8>>;
+}
+impl OathConnection for YubiKeyConnection {
+    fn is_present(&self) -> Result<bool> {
+        let status = self.card.borrow().status2_owned()?;
+        Ok(status.status().intersects(
+            pcsc::Status::PRESENT
+                | pcsc::Status::SWALLOWED
+                | pcsc::Status::POWERED
+                | pcsc::Status::NEGOTIABLE
+                | pcsc::Status::SPECIFIC,
+        ))
+    }
+    fn version(&self) -> (u8, u8, u8) {
+        self.version
+    }
+    fn device_id(&self) -> [u8; 8] {
+        self.device_id
+    }
+    fn challenge(&self) -> Option<&[u8]> {
+        self.challenge.as_deref()
+    }
+    fn challenge_algorithm(&self) -> apdu::Algorithm {
+        self.challenge_algorithm.unwrap_or(apdu::Algorithm::Sha1)
+    }
+    fn transmit(&self, command: &[u8]) -> Result<Vec<u8>> {
+        YubiKeyConnection::transmit(self, command)
+    }
+}
+pub fn response_data(response: &[u8]) -> Result<&[u8]> {
+    if response.len() < 2 {
+        return Err(YubiKeyError::InvalidResponse("Response too short".into()));
+    }
+    let status = (response[response.len() - 2], response[response.len() - 1]);
+    match status {
+        sw::SUCCESS => Ok(&response[..response.len() - 2]),
+        sw::AUTH_REQUIRED => Err(YubiKeyError::AuthenticationRequired),
+        sw::NO_SUCH_OBJECT => Err(YubiKeyError::CredentialNotFound(
+            "Credential is not available on this key".into(),
+        )),
+        sw::NO_SPACE => Err(YubiKeyError::NoSpace),
+        sw::WRONG_SYNTAX => Err(YubiKeyError::InvalidName),
+        sw::AUTH_NOT_INITIALIZED => Err(YubiKeyError::WrongPassword),
+        (sw1, sw2) => Err(YubiKeyError::ApduError { sw1, sw2 }),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -241,6 +328,23 @@ mod tests {
         response
     }
 
+    #[test]
+    fn select_rejects_invalid_or_duplicate_authentication_metadata() {
+        for extra in [
+            vec![0x7b, 1, 0x21],
+            vec![0x7b, 0],
+            vec![0x74, 1, 7],
+            vec![0x7b, 1, 1, 0x7b, 1, 2],
+        ] {
+            let mut data = vec![0x79, 3, 5, 7, 1, 0x71, 8];
+            data.extend_from_slice(b"12345678");
+            data.extend(extra);
+            assert!(
+                YubiKeyConnection::parse_select_response(&successful_select_response(&data))
+                    .is_err()
+            );
+        }
+    }
     #[test]
     fn select_response_requires_device_id() {
         let response = successful_select_response(&[Tag::Version as u8, 3, 5, 7, 1]);

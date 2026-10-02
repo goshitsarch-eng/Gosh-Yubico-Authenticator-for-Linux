@@ -24,3 +24,8 @@ rust/target/
 .flatpak-builder/
 repo/
 *.flatpak
+/dist/
+/rpmbuild/
+/release-*/
+__pycache__/
+.pytest_cache/

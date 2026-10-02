@@ -25,11 +25,13 @@ pub enum YubiKeyError {
     #[error("Touch required on YubiKey")]
     TouchRequired,
 
+    #[error(
+        "A credential with this name already exists; delete it explicitly before replacing it"
+    )]
+    CredentialAlreadyExists,
+
     #[error("Credential not found: {0}")]
     CredentialNotFound(String),
-
-    #[error("Credential already exists: {0}")]
-    CredentialAlreadyExists(String),
 
     #[error("No space left on device")]
     NoSpace,
@@ -67,7 +69,13 @@ impl From<pcsc::Error> for YubiKeyError {
         match err {
             pcsc::Error::NoReadersAvailable => YubiKeyError::NoDevice,
             pcsc::Error::ReaderUnavailable => YubiKeyError::Disconnected,
-            pcsc::Error::RemovedCard => YubiKeyError::Disconnected,
+            pcsc::Error::RemovedCard
+            | pcsc::Error::NoSmartcard
+            | pcsc::Error::ResetCard
+            | pcsc::Error::InvalidHandle
+            | pcsc::Error::NoService
+            | pcsc::Error::ServiceStopped
+            | pcsc::Error::UnresponsiveCard => YubiKeyError::Disconnected,
             pcsc::Error::Timeout => YubiKeyError::Timeout,
             pcsc::Error::Cancelled => YubiKeyError::Cancelled,
             _ => YubiKeyError::PcscError(err.to_string()),

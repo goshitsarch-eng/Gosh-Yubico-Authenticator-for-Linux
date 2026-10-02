@@ -1,6 +1,6 @@
-/// APDU (Application Protocol Data Unit) building and parsing for YubiKey OATH communication
-///
-/// Based on YKOATH Protocol: https://developers.yubico.com/OATH/YKOATH_Protocol.html
+//! APDU (Application Protocol Data Unit) building and parsing for YubiKey OATH communication
+//!
+//! Based on YKOATH Protocol: https://developers.yubico.com/OATH/YKOATH_Protocol.html
 
 /// OATH applet AID (Application Identifier)
 pub const OATH_AID: &[u8] = &[0xA0, 0x00, 0x00, 0x05, 0x27, 0x21, 0x01];
@@ -119,10 +119,10 @@ pub fn build_select_apdu() -> Vec<u8> {
 /// Build a LIST credentials APDU
 pub fn build_list_apdu() -> Vec<u8> {
     vec![
-        0x00,                     // CLA
+        0x00,                    // CLA
         Instruction::List as u8, // INS
-        0x00,                     // P1
-        0x00,                     // P2
+        0x00,                    // P1
+        0x00,                    // P2
     ]
 }
 
@@ -141,10 +141,10 @@ pub fn build_calculate_apdu(name: &[u8], challenge: &[u8]) -> Vec<u8> {
     data.extend_from_slice(challenge);
 
     let mut apdu = vec![
-        0x00,                          // CLA
+        0x00,                         // CLA
         Instruction::Calculate as u8, // INS
-        0x00,                          // P1
-        0x01,                          // P2: truncate
+        0x00,                         // P1
+        0x01,                         // P2: truncate
         data.len() as u8,
     ];
     apdu.extend(data);
@@ -161,10 +161,10 @@ pub fn build_calculate_all_apdu(challenge: &[u8]) -> Vec<u8> {
     data.extend_from_slice(challenge);
 
     let mut apdu = vec![
-        0x00,                             // CLA
+        0x00,                            // CLA
         Instruction::CalculateAll as u8, // INS
-        0x00,                             // P1
-        0x01,                             // P2: truncate
+        0x00,                            // P1
+        0x01,                            // P2: truncate
         data.len() as u8,
     ];
     apdu.extend(data);
@@ -200,8 +200,8 @@ pub fn build_put_apdu(
     // Property TLV (if touch required)
     if require_touch {
         data.push(Tag::Property as u8);
-        data.push(0x01); // Length = 1 byte
-        data.push(0x02); // REQUIRE_TOUCH = 0x02
+        // YKOATH PROPERTY is the exceptional tag + property byte (no length).
+        data.push(0x02); // REQUIRE_TOUCH
     }
 
     // Initial moving factor (for HOTP)
@@ -212,10 +212,10 @@ pub fn build_put_apdu(
     }
 
     let mut apdu = vec![
-        0x00,                    // CLA
+        0x00,                   // CLA
         Instruction::Put as u8, // INS
-        0x00,                    // P1
-        0x00,                    // P2
+        0x00,                   // P1
+        0x00,                   // P2
         data.len() as u8,
     ];
     apdu.extend(data);
@@ -232,10 +232,10 @@ pub fn build_delete_apdu(name: &[u8]) -> Vec<u8> {
     data.extend_from_slice(name);
 
     let mut apdu = vec![
-        0x00,                       // CLA
+        0x00,                      // CLA
         Instruction::Delete as u8, // INS
-        0x00,                       // P1
-        0x00,                       // P2
+        0x00,                      // P1
+        0x00,                      // P2
         data.len() as u8,
     ];
     apdu.extend(data);
@@ -257,10 +257,10 @@ pub fn build_validate_apdu(response: &[u8], challenge: &[u8]) -> Vec<u8> {
     data.extend_from_slice(challenge);
 
     let mut apdu = vec![
-        0x00,                         // CLA
+        0x00,                        // CLA
         Instruction::Validate as u8, // INS
-        0x00,                         // P1
-        0x00,                         // P2
+        0x00,                        // P1
+        0x00,                        // P2
         data.len() as u8,
     ];
     apdu.extend(data);
@@ -270,10 +270,10 @@ pub fn build_validate_apdu(response: &[u8], challenge: &[u8]) -> Vec<u8> {
 /// Build a SEND REMAINING APDU (for getting more response data)
 pub fn build_send_remaining_apdu() -> Vec<u8> {
     vec![
-        0x00,                              // CLA
+        0x00,                             // CLA
         Instruction::SendRemaining as u8, // INS
-        0x00,                              // P1
-        0x00,                              // P2
+        0x00,                             // P1
+        0x00,                             // P2
     ]
 }
 
@@ -291,7 +291,7 @@ pub fn build_set_code_apdu(key: &[u8], challenge: &[u8], response: &[u8]) -> Vec
         data.push(0x00); // Length = 0 means remove password
     } else {
         data.push((1 + key.len()) as u8); // algorithm byte + key
-        data.push(Algorithm::Sha1 as u8); // Always use SHA1 for password
+        data.push((OathType::Totp as u8) | (Algorithm::Sha1 as u8));
         data.extend_from_slice(key);
     }
 
@@ -310,10 +310,10 @@ pub fn build_set_code_apdu(key: &[u8], challenge: &[u8], response: &[u8]) -> Vec
     }
 
     let mut apdu = vec![
-        0x00,                        // CLA
+        0x00,                       // CLA
         Instruction::SetCode as u8, // INS
-        0x00,                        // P1
-        0x00,                        // P2
+        0x00,                       // P1
+        0x00,                       // P2
         data.len() as u8,
     ];
     apdu.extend(data);
@@ -387,9 +387,9 @@ pub mod sw {
 pub fn get_totp_challenge(period: u32) -> [u8; 8] {
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-    let counter = timestamp / period as u64;
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let counter = timestamp / u64::from(period.max(1));
     counter.to_be_bytes()
 }
 
@@ -415,7 +415,7 @@ mod tests {
         let apdu = build_select_apdu();
         assert_eq!(apdu[0], 0x00); // CLA
         assert_eq!(apdu[1], 0xA4); // INS
-        assert_eq!(apdu[4], 7);    // Length of AID
+        assert_eq!(apdu[4], 7); // Length of AID
         assert_eq!(&apdu[5..], OATH_AID);
     }
 
@@ -429,7 +429,7 @@ mod tests {
     fn test_tlv_parser() {
         let data = [
             0x71, 0x04, b't', b'e', b's', b't', // Name TLV
-            0x79, 0x03, 0x05, 0x03, 0x00,       // Version TLV
+            0x79, 0x03, 0x05, 0x03, 0x00, // Version TLV
         ];
         let parser = TlvParser::new(&data);
         let tlvs: Vec<_> = parser.collect();
